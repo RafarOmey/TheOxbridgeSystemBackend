@@ -5,7 +5,6 @@ import * as mongoose from 'mongoose';
 import * as bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 import {Event} from "./models/event";
-import {EventController} from './controllers/event.controller'
 
 dotenv.config({path:'config/config.env'});
 
