@@ -1,12 +1,12 @@
 import { app } from '../controllers/express.controller';
-import { locationRegistrations } from '../controllers/locationRegistration.controller';
+import express from 'express';
+
 
 class locationRegistrationRoute {
-    
+
     // Create a new LocationRegistration
-    
-    
-    (app:Express).post('/locationRegistrations/', locationRegistrations.create);
+
+    app.post('/locationRegistrations/', locationRegistrations.create);
 
     // Retrieve latest LocationRegistrations from specified event
     app.get('/locationRegistrations/getLive/:eventId', locationRegistrations.getLive);

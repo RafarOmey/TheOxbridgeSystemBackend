@@ -1,11 +1,12 @@
-const Event = require('../models/event.js');
-const EventRegistration = require('../models/eventRegistration.js');
-const Ship = require('../models/ship.js');
-const Auth = require('./authentication.controller.js');
-const RacePoint = require('../models/racePoint.js');
+import {Event} from '../models/event';
+import {EventRegistration} from '../models/eventRegistration';
+import {Ship} from '../models/ship';
+import {Authorize} from './authentication.controller';
+import {RacePoint} from '../models/racePoint';
+import {Request,Response} from 'express';
 
 // Create and Save a new Event
-exports.create = (req, res) => {
+exports.create = (req: Request, res:Response): void => {
 
     // Checking if authorized
     Auth.Authorize(req, res, "admin", function (err) {
@@ -34,7 +35,7 @@ exports.create = (req, res) => {
 };
 
 // Checking if event has a route
-exports.hasRoute = (req, res) => {
+exports.hasRoute = (req:Request, res:Response) => {
     RacePoint.find({eventId: req.params.eventId}, {_id:0, __v:0}, function(err, racepoints){
         if(err)
             return res.status(500).send({message: "false"});
@@ -46,7 +47,7 @@ exports.hasRoute = (req, res) => {
 }
 
 // Retrieve and return all events from the database.
-exports.findAll = (req, res) => {
+exports.findAll = (req:Request, res:Response) => {
     Event.find({}, { _id: 0, __v: 0 }, function (err, events) {
         if (err)
             return res.status(500).send({ message: err.message || "Some error occurred while retriving events" });
@@ -57,7 +58,7 @@ exports.findAll = (req, res) => {
 
 // Get all events that the user is a participant of
 let pending = 0;
-exports.findFromUsername = (req, res) => {
+exports.findFromUsername = (req:Request, res:Response) => {
 
     // Checking if authorized
     Auth.Authorize(req, res, "all", function (err, decodedUser) {
@@ -65,7 +66,7 @@ exports.findFromUsername = (req, res) => {
             return err;
 
         // Finding all the ships the user owns
-        const events = [];
+        const events:Event[] = new Array;
         Ship.find({ emailUsername: decodedUser.id }, { _id: 0, __v: 0 }, function (err, ships) {
             if (err)
                 return res.status(500).send({ message: err.message || "Some error occurred while retriving ships" });
@@ -111,7 +112,7 @@ exports.findFromUsername = (req, res) => {
 };
 
 // Find a single event with the given eventId
-exports.findOne = (req, res) => {
+exports.findOne = (req:Request, res:Response) => {
     Event.findOne({ eventId: req.params.eventId }, { _id: 0, __v: 0 }, function (err, event) {
         if (err)
             return res.status(500).send({ message: "Error retrieving event with eventId " + req.params.eventId });
@@ -123,7 +124,7 @@ exports.findOne = (req, res) => {
 };
 
 // Finding and updating event with the given eventId
-exports.update = (req, res) => {
+exports.update = (req:Request, res:Response) => {
 
     // Checking if authorized
     Auth.Authorize(req, res, "admin", function (err) {
@@ -143,7 +144,7 @@ exports.update = (req, res) => {
 };
 
 // Changes event property "isLive" to true
-exports.StartEvent = (req, res) => {
+exports.StartEvent = (req:Request, res:Response) => {
 
     // Checking if authorized
     Auth.Authorize(req, res, "admin", function (err) {
@@ -163,7 +164,7 @@ exports.StartEvent = (req, res) => {
 };
 
 // Changes event property "isLive" to false
-exports.StopEvent = (req, res) => {
+exports.StopEvent = (req:Request, res:Response) => {
 
     // Checking if authorized
     Auth.Authorize(req, res, "admin", function(err){
@@ -182,7 +183,7 @@ exports.StopEvent = (req, res) => {
 }
 
 // Delete an event with the specified eventId in the request
-exports.delete = (req, res) => {
+exports.delete = (req:Request, res:Response) => {
 
     // Checking if authorized
     Auth.Authorize(req, res, "admin", function (err) {

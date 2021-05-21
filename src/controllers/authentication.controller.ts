@@ -1,24 +1,25 @@
-export {};
 import * as jwt from "jsonwebtoken";
 import * as dotenv from 'dotenv';
-dotenv.config({ path: 'config/playground.env' }); // NEW
+import {Request,Response} from 'express';
+import {AccessToken} from './accessToken.controller'
+dotenv.config({ path: 'config/config.env' }); // NEW
 
-export const Authorize = (req, res, role, callback) => {
+export const Authorize = (req:Request,res:Response, role:String) => {
     // Checks if a token is provided
-    const token = req.headers['x-access-token'];
-    if (!token)
-        return callback(res.status(401).send({auth: false, message: 'No token provided'}));
-
+    const token = req.header('x-access-token');
+    if (!token){
+        return res.status(401).json({auth: false, message: 'No token provided'});
+    }
     // Verifying the token
     jwt.verify(token, process.env.SECRET, (err, decoded) => {
         if (err)
-            return callback(res.status(500).send({auth: false, message: 'Failed to authenticate token'}));
+            return res.status(500).json({auth: false, message: 'Failed to authenticate token'});
 
         // Verifying that the request is allowed by the requesting role
-        if (role === "admin" && decoded.role !== "admin")
-            return callback(res.status(401).send({auth: false, message: 'Not authorized'}));
+        if (role === "admin" && AccessToken.userRole(token) !== "admin")
+            return res.status(401).json({auth: false, message: 'Not authorized'});
 
-        return callback(null, decoded);
+        return res.status(201).json({auth:true,message:'success'});
     });
 
 }
@@ -36,19 +37,19 @@ export const Authorize = (req:Request, res: Response, role: string) => {
         const token = req.headers('x-access-token');
         if(!token)
             return callback(res.status(401).send({auth: false, message: 'No token provided'}),null);
-    
+
         // Verifying the token
         jwt.verify(token, process.env.TOKEN_SECRET, function(err, decoded){
             if(err)
                 return res.status(500).json('Failed to authenticate token');
-    
+
             // Verifying that the request is allowed by the requesting role
             if(role === "admin" && decoded.role !== "admin")
                 return callback(res.status(401).send({auth: false, message: 'Not authorized'}),null);
-    
+
             return callback(null, decoded);
         });
-    
+
 }
 
 
