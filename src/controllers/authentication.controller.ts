@@ -1,28 +1,40 @@
 import * as jwt from "jsonwebtoken";
 import * as dotenv from 'dotenv';
-import {Request,Response} from 'express';
-import {AccessToken} from './accessToken.controller'
+import { Request, Response } from 'express';
+import { AccessToken } from './accessToken.controller'
 dotenv.config({ path: 'config/config.env' }); // NEW
 
-export const Authorize = (req:Request,res:Response, role:String) => {
-    // Checks if a token is provided
-    const token = req.header('x-access-token');
-    if (!token){
-        return res.status(401).json({auth: false, message: 'No token provided'});
+export class Auth {
+    static async Authorize(req: Request, res: Response, role: String):Promise<Boolean> {
+        // Checks if a token is provided
+        const token = req.header('x-access-token');
+        const verify: Promise<Boolean> = this.verify(token, process.env.TOKEN_SECRET, role);
+        if (!verify) {
+            return false;
+        }
+        else if (verify) {
+            return true;
+        }
     }
     // Verifying the token
-    jwt.verify(token, process.env.SECRET, (err, decoded) => {
-        if (err)
-            return res.status(500).json({auth: false, message: 'Failed to authenticate token'});
+    static async verify(token: any, secret: string, role: String): Promise<Boolean> {
 
         // Verifying that the request is allowed by the requesting role
         if (role === "admin" && AccessToken.userRole(token) !== "admin")
-            return res.status(401).json({auth: false, message: 'Not authorized'});
+            return false;
 
-        return res.status(201).json({auth:true,message:'success'});
-    });
+        else
+            return true;
+    }
+
+    static async getUser(req:Request,res:Response){
+        const token = req.header('x-access-token');
+        const user:any = AccessToken.getUser(token);
+        return user;
+    }
 
 }
+
 
 
 /*import * as jwt from "jsonwebtoken";

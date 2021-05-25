@@ -14,5 +14,11 @@ class AccessToken{
       // console.log(decodedToken.role);
       return decodedToken.role;
    }
+
+   static getUser(token:any):string{
+      const decodedToken:any = jwtDecode(token);
+      // console.log(decodedToken.role);
+      return decodedToken;
+   }
 }
 export {AccessToken}

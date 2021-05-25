@@ -69,7 +69,7 @@ exports.findAll = (req, res) => {
 };
 
 // Retrieve all eventRegistrations where the given user is a participant
-let pending = 0;
+const pending = 0;
 exports.findEventRegFromUsername = (req, res) => {
 
     // Checking if authorized
