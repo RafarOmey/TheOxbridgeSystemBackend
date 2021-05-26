@@ -14,6 +14,7 @@ import { IUser, User } from "./models/user";
 import bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import cookieParser from "cookie-parser";
+import { Validate } from "./controllers/validate.controller"
 
 dotenv.config({ path: 'config/config.env' });
 
@@ -567,28 +568,374 @@ app.post('/users/login', async (req, res) => {
     try {
         // Find the user and validate the password
         const user: IUser = await User.findOne({ emailUsername: req.body.emailUsername });
-        if (!user){
+        if (!user) {
             return res.status(403).json('Username incorrect');
         }
 
-        const userpw:any = user.password;
+        const userpw: any = user.password;
         const passwordIsValid = bcrypt.compareSync(req.body.password, userpw);
 
-        if (!passwordIsValid){
+        if (!passwordIsValid) {
             return res.status(401).send({ auth: false, token: null, message: "Invalid password" });
         }
 
         const token = jwt.sign({ id: user.emailUsername, role: user.role }, process.env.TOKEN_SECRET, { expiresIn: 86400 });
         res.status(200).send({ emailUsername: user.emailUsername, firstname: user.firstname, lastname: user.lastname, auth: true, token });
-    
-    }catch (e) {
-    res.status(400).json('BAD REQUEST')
-}
+
+    } catch (e) {
+        res.status(400).json('BAD REQUEST')
+    }
 });
 
+
+app.post('/eventRegistrations/', async (req, res) => {
+    try {
+        // Checking if authorized
+        const verify: Boolean = await Auth.Authorize(req, res, "admin");
+        if (!verify) {
+            return res.status(400).send({ auth: false, message: 'Not Authorized' });
+        }
+        // Finding next shipId
+        const eventRegistration = new EventRegistration(req.body);
+        const regDone: IEventRegistration = await Validate.createRegistration(eventRegistration, res);
+        if (regDone == null) {
+            return res.status(500).send({ message: "SUCKS FOR YOU" });
+        }
+        res.status(201).json(regDone);
+
+
+    } catch (e) {
+        res.status(400).json('BAD REQUEST')
+    }
+
+});
+
+// Retrieve all eventRegistrations
+app.get('/eventRegistrations/', async (req, res) => {
+    const verify: Boolean = await Auth.Authorize(req, res, "admin");
+    if (!verify) {
+        return res.status(400).send({ auth: false, message: 'Not Authorized' });
+    }
+
+    try {
+        const eventRegs: IEventRegistration[] = await EventRegistration.find({}, { _id: 0, __v: 0 });
+        res.status(200).send(eventRegs);
+    } catch (e) {
+        res.status(400).json('BAD REQUEST')
+    }
+});
+
+// Retrieve all eventRegistrations where the given user is a participant
+let pending: number = 0;
+app.get('/eventRegistrations/findEventRegFromUsername/:eventId', async (req, res) => {
+    // Checking if authorized
+    const verify: Boolean = await Auth.Authorize(req, res, "admin");
+    if (!verify) {
+        return res.status(400).send({ auth: false, message: 'Not Authorized' });
+    }
+
+
+    try {
+        const token: any = req.header('x-access-token');
+        const user: any = AccessToken.getUser(token);
+        const eventRegistrations: any[] = [];
+        const shipByEmailUserName: IShip[] = await Ship.find(user.emailUsername, {
+            _id: 0,
+            __v: 0
+        });
+        shipByEmailUserName.forEach(async (ship: IShip) => {
+            pending++;
+            const evId: any = req.params.eventId;
+            const sId: any = ship.shipId;
+            const eventRegistration: IEventRegistration[] = await EventRegistration.find({ eventId: evId, shipId: sId }, { _id: 0, __v: 0 })
+            pending--;
+
+            eventRegistrations.push(eventRegistration)
+        });
+        if (eventRegistrations)
+            return res.status(200).send(eventRegistrations);
+
+
+    } catch (e) {
+        res.status(400).json('BAD REQUEST')
+    }
+});
+
+app.post('/eventRegistrations/signUp', async (req, res) => {
+    // Checking if authorized
+    const verify: Boolean = await Auth.Authorize(req, res, "admin");
+    if (!verify) {
+        return res.status(400).send({ auth: false, message: 'Not Authorized' });
+    }
+    try {
+
+        // Checks that the eventCode is correct
+        const event: IEvent = await Event.findOne({ eventCode: req.body.eventCode }, { _id: 0, __v: 0 });
+        if (!event)
+            return res.status(404).send({ message: "Wrong eventCode" });
+
+        if (event) {
+            // Checks that the ship isn't already assigned to the event
+            const eventRegistration: IEventRegistration = await EventRegistration.findOne({ shipId: req.body.shipId, eventId: event.eventId }, { _id: 0, __v: 0 });
+
+            if (eventRegistration)
+                return res.status(409).send({ message: "ship already registered to this event" })
+
+            if (!eventRegistration) {
+
+                // Creating the eventRegistration
+                const registration = new EventRegistration(req.body);
+                registration.eventId = event.eventId;
+                const regDone: IEventRegistration = await Validate.createRegistration(registration, res);
+                if (regDone == null) {
+                    return res.status(500).send({ message: "SUCKS FOR YOU" });
+                }
+
+                return res.status(201).json(regDone);
+
+            }
+        }
+
+
+
+
+
+    } catch (e) {
+        res.status(400).json('BAD REQUEST')
+    }
+});
+
+app.delete('/eventRegistrations/:eventRegId', async (req, res) => {
+    // Checking if authorized
+    const verify: Boolean = await Auth.Authorize(req, res, "all");
+    if (!verify) {
+        return res.status(400).send({ auth: false, message: 'Not Authorized' });
+    }
+    try {
+        const evRegId: any = req.params.eventRegId;
+        // Finding and deleting the registration with the given regId
+        const eventRegistration: IEventRegistration = await EventRegistration.findOneAndDelete({ eventRegId: evRegId });
+        if (!eventRegistration)
+            return res.status(404).send({ message: "EventRegistration not found with eventRegId " + req.params.eventRegId });
+        res.status(202).json(eventRegistration);
+
+
+
+    } catch (e) {
+        res.status(400).json('BAD REQUEST')
+    }
+});
+
+app.post('/eventRegistrations/addParticipant', async (req, res) => {
+    // Checking if authorized
+    const verify: Boolean = await Auth.Authorize(req, res, "admin");
+    if (!verify) {
+        return res.status(400).send({ auth: false, message: 'Not Authorized' });
+    }
+    try {
+        // Creates a user if no user corresponding to the given emailUsername found
+        const user: IUser = await User.findOne({ emailUsername: req.body.emailUsername }, { _id: 0, __v: 0 });
+        if (!user) {
+
+            const hashedPassword = bcrypt.hashSync("1234", 10);
+            const newUser = new User({ "emailUsername": req.body.emailUsername, "firstname": req.body.firstname, "lastname": req.body.lastname, "password": hashedPassword, "role": "user" });
+
+            newUser.save();
+        }
+
+        // Creating a ship if a ship with the given name and owned by the given user, doesn't exist
+        const ship: IShip = await Ship.findOne({ emailUsername: req.body.emailUsername, name: req.body.shipName }, { _id: 0, __v: 0 });
+        if (!ship) {
+
+            const newShip = new Ship({ "name": req.body.shipName, "emailUsername": req.body.emailUsername });
+
+            const lastShip: IShip = await Ship.findOne({}).sort('-desc');
+            const one: any = 1;
+            if (lastShip)
+                newShip.shipId = lastShip.shipId + one;
+            else
+                newShip.shipId = 1;
+
+            newShip.save();
+            const newEventRegistration: IEventRegistration = new EventRegistration({ "eventId": req.body.eventId, "shipId": newShip.shipId, "trackColor": "Yellow", "teamName": req.body.teamName });
+            const regDone: IEventRegistration = await Validate.createRegistration(newEventRegistration, res);
+            res.status(201).json(regDone);
+
+        }
+        else {
+            const newEventRegistration = new EventRegistration({ "eventId": req.body.eventId, "shipId": ship.shipId, "trackColor": "Yellow", "teamName": req.body.teamName })
+            const regDone: IEventRegistration = await Validate.createRegistration(newEventRegistration, res);
+            res.status(201).json(regDone);
+        }
+
+
+
+    } catch (e) {
+        res.status(400).json('BAD REQUEST')
+    }
+});
+
+app.get('/eventRegistrations/getParticipants/:eventId', async (req, res) => {
+
+
+    try {
+
+        const participants: any[] = [];
+        const evId: any = req.params.eventId;
+        const eventRegs: IEventRegistration[] = await EventRegistration.find({ eventId: evId }, { _id: 0, __v: 0 });
+        if (!eventRegs || eventRegs.length === 0)
+            return res.status(404).send({ message: "No participants found" });
+
+
+        eventRegs.forEach(async (eventRegistration: IEventRegistration) => {
+            pending++;
+
+            const ship: IShip = await Ship.findOne({ shipId: eventRegistration.shipId }, { _id: 0, __v: 0 });
+            if (!ship)
+                return res.status(404).send({ message: "Ship not found" });
+
+            else if (ship) {
+                const user: IUser = await User.findOne({ emailUsername: ship.emailUsername }, { _id: 0, __v: 0 });
+                pending--;
+                if (!user)
+                    return res.status(404).send({ message: "User not found" });
+
+                if (user) {
+                    const participant: any = {
+                        "firstname": user.firstname,
+                        "lastname": user.lastname,
+                        "shipName": ship.name,
+                        "teamName": eventRegistration.teamName,
+                        "emailUsername": user.emailUsername,
+                        "eventRegId": eventRegistration.eventRegId
+                    }
+                    participants.push(participant);
+
+                    if (pending === 0) {
+                        return res.status(200).json(participants);
+                    }
+                }
+
+            }
+        })
+
+
+
+
+
+    } catch (e) {
+        res.status(400).json('BAD REQUEST')
+    }
+});
+
+app.put('/eventRegistrations/updateParticipant/:eventRegId', async (req, res) => {
+    // Checking if authorized
+    const verify: Boolean = await Auth.Authorize(req, res, "admin");
+    if (!verify) {
+        return res.status(400).send({ auth: false, message: 'Not Authorized' });
+    }
+    try {
+        const evRegId: any = req.params.eventRegId;
+        const eventReg: IEventRegistration = await EventRegistration.findOneAndUpdate({ eventRegId: evRegId }, req.body);
+        if (eventReg) {
+            const ship: IShip = await Ship.findOneAndUpdate({ shipId: eventReg.shipId }, req.body);
+            if (ship) {
+                const user: IUser = await User.findOneAndUpdate({ emailUsername: ship.emailUsername }, req.body);
+                if (!user)
+                    return res.status(404).send({ message: "User not found with emailUsername " + ship.emailUsername });
+                else
+                    return res.status(200).send({ updated: "true" })
+
+            }
+            else
+                return res.status(404).send({ message: "Ship not found with shipId " + eventReg.shipId });
+
+        }
+        else
+            return res.status(404).send({ message: "EventRegistration not found with eventRegId " + req.params.eventRegId });
+
+
+
+    } catch (e) {
+        res.status(400).json('BAD REQUEST')
+    }
+});
+
+app.post('/locationRegistrations/', async (req, res) => {
+    // Checking if authorized
+    const verify: Boolean = await Auth.Authorize(req, res, "admin");
+    if (!verify) {
+        return res.status(400).send({auth: false, message: 'Not Authorized'});
+    }
+    try {
+
+
+
+    } catch (e) {
+        res.status(400).json('BAD REQUEST')
+    }});
+
+app.get('/locationRegistrations/getLive/:eventId', async (req, res) => {
+    // Checking if authorized
+    const verify: Boolean = await Auth.Authorize(req, res, "admin");
+    if (!verify) {
+        return res.status(400).send({auth: false, message: 'Not Authorized'});
+    }
+    try {
+
+
+
+    } catch (e) {
+        res.status(400).json('BAD REQUEST')
+    }});
+
+app.get('/locationRegistrations/getReplay/:eventId',async (req, res) => {
+    // Checking if authorized
+    const verify: Boolean = await Auth.Authorize(req, res, "admin");
+    if (!verify) {
+        return res.status(400).send({auth: false, message: 'Not Authorized'});
+    }
+    try {
+
+
+
+    } catch (e) {
+        res.status(400).json('BAD REQUEST')
+    }});
+
+
+app.get('/locationRegistrations/getScoreboard/:eventId', async (req, res) => {
+    // Checking if authorized
+    const verify: Boolean = await Auth.Authorize(req, res, "admin");
+    if (!verify) {
+        return res.status(400).send({auth: false, message: 'Not Authorized'});
+    }
+    try {
+
+
+
+    } catch (e) {
+        res.status(400).json('BAD REQUEST')
+    }});
+
+app.delete('/locationRegistrations/deleteFromEventRegId/:eventId', async (req, res) => {
+    // Checking if authorized
+    const verify: Boolean = await Auth.Authorize(req, res, "admin");
+    if (!verify) {
+        return res.status(400).send({auth: false, message: 'Not Authorized'});
+    }
+    try {
+
+
+
+    } catch (e) {
+        res.status(400).json('BAD REQUEST')
+    }});
+
+
+    
 app.get('*', (req, res) => {
     return res.status(400).send('Page Not Found');
 });
-
 
 export { app }

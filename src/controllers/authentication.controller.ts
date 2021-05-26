@@ -8,6 +8,9 @@ export class Auth {
     static async Authorize(req: Request, res: Response, role: String):Promise<Boolean> {
         // Checks if a token is provided
         const token = req.header('x-access-token');
+        if(!token){
+            return false;
+        }
         const verify: Promise<Boolean> = this.verify(token, process.env.TOKEN_SECRET, role);
         if (!verify) {
             return false;
