@@ -42,7 +42,7 @@
 //             return res.status(200).send(true);
 //         else
 //             return res.status(200).send(false);
-    
+
 
 
 // // Retrieve and return all events from the database.

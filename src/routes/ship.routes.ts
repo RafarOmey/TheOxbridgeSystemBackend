@@ -1,5 +1,5 @@
-//module.exports = (app) => {
-    //const ships = require('../controllers/ship.controller.js');
+// module.exports = (app) => {
+    // const ships = require('../controllers/ship.controller.js');
 
     // Create a new ship
     // app.post('/ships', ships.create);
@@ -17,9 +17,9 @@
     // app.get('/ships/myShips/fromUsername', ships.findMyShips);
 
     // Update a ship
-    //app.put('/ships/:shipId', ships.update);
+    // app.put('/ships/:shipId', ships.update);
 
     // Delete a ship
     // app.delete('/ships/:shipId', ships.delete);
-//}
+// }
 export{}

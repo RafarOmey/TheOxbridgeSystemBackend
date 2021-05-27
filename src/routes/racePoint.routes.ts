@@ -8,6 +8,6 @@
     // app.get('/racepoints/fromEventId/:eventId', racePoint.findAllEventRacePoints);
 
     // Creates a new route of racepoints for an event
-    //app.post('/racepoints/createRoute/:eventId', racePoint.createRoute);
-//}
+    // app.post('/racepoints/createRoute/:eventId', racePoint.createRoute);
+// }
 export{}

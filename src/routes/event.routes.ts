@@ -1,6 +1,6 @@
 export{}
-//module.exports = (app) => {
-    //const events = require('../controllers/event.controller.js');
+// module.exports = (app) => {
+    // const events = require('../controllers/event.controller.js');
 
     // Create an new event
     // app.post('/events', events.create); //ASK IF CORRECT
@@ -28,4 +28,4 @@ export{}
 
     // Retrieve all events with participant corresponding to primarykey of user, supplied from the token
     // app.get('/events/myEvents/findFromUsername', events.findFromUsername);
-//}
+// }

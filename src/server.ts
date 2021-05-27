@@ -11,10 +11,12 @@ import { RacePoint, IRacePoint } from './models/racePoint'
 import { AccessToken } from "./controllers/accessToken.controller";
 import { Ship, IShip } from './models/ship'
 import { IUser, User } from "./models/user";
+import { ILocationRegistration, LocationRegistration } from "./models/locationRegistration";
 import bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import cookieParser from "cookie-parser";
 import { Validate } from "./controllers/validate.controller"
+
 
 dotenv.config({ path: 'config/config.env' });
 
@@ -39,7 +41,7 @@ connect(process.env.DB, {
 const router = express.Router();
 
 // TO PROCESS THE NEXT REQUEST !!
-router.use(function (req, res, next) {
+router.use((req, res, next) => {
     console.log("recieved a request now, ready for the next");
     next();
 });
@@ -57,7 +59,7 @@ app.get('/events', async (req, res) => {
 // POST EVENT
 app.post('/events', async (req, res) => {
     try {
-        const verify: Boolean = await Auth.Authorize(req, res, "admin");
+        const verify: boolean = await Auth.Authorize(req, res, "admin");
         if (!verify) {
             return res.status(400).send({ auth: false, message: 'Not Authorized' });
         }
@@ -103,7 +105,7 @@ app.get('/events/:eventId', async (req, res) => {
 // UPDATE EVENT
 app.put('/events/:eventId', async (req, res) => {
     try {
-        const verify: Boolean = await Auth.Authorize(req, res, "admin");
+        const verify: boolean = await Auth.Authorize(req, res, "admin");
         if (!verify) {
             return res.status(400).send({ auth: false, message: 'Not Authorized' });
         }
@@ -123,7 +125,7 @@ app.put('/events/:eventId', async (req, res) => {
 app.delete('/events/:eventId', async (req, res) => {
     try {
         // Checking if authorized
-        const verify: Boolean = await Auth.Authorize(req, res, "admin");
+        const verify: boolean = await Auth.Authorize(req, res, "admin");
         if (!verify) {
             return res.status(400).send({ auth: false, message: 'Not Authorized' });
         }
@@ -149,7 +151,7 @@ app.delete('/events/:eventId', async (req, res) => {
 app.put('/events/startEvent/:eventId', async (req, res) => {
     try {
         // Checking if authorized
-        const verify: Boolean = await Auth.Authorize(req, res, "admin");
+        const verify: boolean = await Auth.Authorize(req, res, "admin");
         if (!verify) {
             return res.status(400).send({ auth: false, message: 'Not Authorized' });
         }
@@ -167,7 +169,7 @@ app.put('/events/startEvent/:eventId', async (req, res) => {
 app.get('/events/stopEvent/:eventId', async (req, res) => {
     try {
         // Checking if authorized
-        const verify: Boolean = await Auth.Authorize(req, res, "admin");
+        const verify: boolean = await Auth.Authorize(req, res, "admin");
         if (!verify) {
             return res.status(400).send({ auth: false, message: 'Not Authorized' });
         }
@@ -197,40 +199,39 @@ app.get('/events/hasRoute/:eventId', async (req, res) => {
 app.get('/events/myEvents/findFromUsername', async (req, res) => {
     try {
         // Checking if authorized
-        const verify: Boolean = await Auth.Authorize(req, res, "admin");
+        const verify: boolean = await Auth.Authorize(req, res, "admin");
         if (!verify) {
             return res.status(400).send({ auth: false, message: 'Not Authorized' });
         }
         // Finding all the ships the user owns
-        const events: any[] = new Array;
+        const events: any[] = [];
         const token: any = req.header('x-access-token');
         const user: any = AccessToken.getUser(token);
         const ships: IShip[] = await Ship.find({ emailUsername: user.emailUsername }, { _id: 0, __v: 0 });
-        let pending: number = 0;
+
+
         if (ships.length > 0) {
             // Finding all eventRegistrations with a ship that the user owns
             ships.forEach(async (ship: IShip) => {
                 const eventRegistrations: IEventRegistration[] = await EventRegistration.find({ shipId: ship.shipId }, { _id: 0, __v: 0 });
                 if (eventRegistrations) {
                     eventRegistrations.forEach(async (eventRegistration: IEventRegistration) => {
-                        pending++;
-                        const ship: IShip = await Ship.findOne({ shipId: eventRegistration.shipId }, { _id: 0, __v: 0 });
+
+                        ship = await Ship.findOne({ shipId: eventRegistration.shipId }, { _id: 0, __v: 0 });
                         if (ship) {
                             const event: IEvent = await Event.findOne({ eventId: eventRegistration.eventId }, { _id: 0, __v: 0 });
-                            pending--
+
                             if (event) {
                                 events.push({ "eventId": event.eventId, "name": event.name, "eventStart": event.eventStart, "eventEnd": event.eventEnd, "city": event.city, "eventRegId": eventRegistration.eventRegId, "shipName": ship.name, "teamName": eventRegistration.teamName, "isLive": event.isLive, "actualEventStart": event.actualEventStart });
                             }
-                            if (pending == 0) {
-                                res.status(200).send(events);
-                            }
+
                         }
                     });
                 }
             });
-        } else {
-            res.status(200).send(events);
         }
+        res.status(200).send(events);
+
     } catch (e) {
         res.status(400).send('BAD REQUEST')
     }
@@ -240,7 +241,7 @@ app.get('/events/myEvents/findFromUsername', async (req, res) => {
 app.post('/ships', async (req, res) => {
     try {
         // Checking if authorized
-        const verify: Boolean = await Auth.Authorize(req, res, "user");
+        const verify: boolean = await Auth.Authorize(req, res, "user");
         if (!verify) {
             return res.status(400).send({ auth: false, message: 'Not Authorized' });
         }
@@ -300,23 +301,22 @@ app.get('/ships/:shipId', async (req, res) => {
 app.get('/ships/fromEventId/:eventId', async (req, res) => {
     try {
         const evId: any = req.params.eventId;
-        let pending: number;
+        const ships: any[] = [];
         const eventRegistrations: IEventRegistration[] = await EventRegistration.find({ eventId: evId }, { _id: 0, __v: 0 });
-        if (eventRegistrations.length != 0) {
-            const ships: any[] = [];
+        if (eventRegistrations.length !== 0) {
+
             eventRegistrations.forEach(async (eventRegistration: IEventRegistration) => {
-                pending++;
+
                 const ship: IShip = await Ship.findOne({ shipId: eventRegistration.shipId }, { _id: 0, __v: 0 });
                 if (ship) {
                     ships.push({ "shipId": ship.shipId, "name": ship.name, "teamName": eventRegistration.teamName });
                 }
-                if (pending === 0) {
-                    res.status(200).json(ships);
-                }
+
             });
-        } else {
-            res.status(200).json({});
         }
+
+        res.status(200).json(ships);
+
     } catch (e) {
         res.status(400).json('BAD REQUEST')
     }
@@ -338,7 +338,7 @@ app.get('/ships/myShips/fromUsername', async (req, res) => {
 app.put('/ships/:shipId', async (req, res) => {
     try {
         // Checking if authorized
-        const verify: Boolean = await Auth.Authorize(req, res, "admin");
+        const verify: boolean = await Auth.Authorize(req, res, "admin");
         if (!verify) {
             return res.status(400).send({ auth: false, message: 'Not Authorized' });
         }
@@ -398,7 +398,7 @@ app.post('/racepoints/createRoute/:eventId', async (req, res) => {
         // Create new racepoints
 
         // Checking if authorized
-        const verify: Boolean = await Auth.Authorize(req, res, "admin");
+        const verify: boolean = await Auth.Authorize(req, res, "admin");
         if (!verify) {
             return res.status(400).send({ auth: false, message: 'Not Authorized' });
         }
@@ -442,7 +442,7 @@ app.get('/users', async (req, res) => {
     try {
 
         // Checking if authorized
-        const verify: Boolean = await Auth.Authorize(req, res, "admin");
+        const verify: boolean = await Auth.Authorize(req, res, "admin");
         if (!verify) {
             return res.status(400).send({ auth: false, message: 'Not Authorized' });
         }
@@ -512,7 +512,7 @@ app.delete('/users/:userName', async (req, res) => {
 app.post('/users/registerAdmin', async (req, res) => {
     try {
         // Checking if authorized
-        const verify: Boolean = await Auth.Authorize(req, res, "admin");
+        const verify: boolean = await Auth.Authorize(req, res, "admin");
         if (!verify) {
             return res.status(400).send({ auth: false, message: 'Not Authorized' });
         }
@@ -591,14 +591,14 @@ app.post('/users/login', async (req, res) => {
 app.post('/eventRegistrations/', async (req, res) => {
     try {
         // Checking if authorized
-        const verify: Boolean = await Auth.Authorize(req, res, "admin");
+        const verify: boolean = await Auth.Authorize(req, res, "admin");
         if (!verify) {
             return res.status(400).send({ auth: false, message: 'Not Authorized' });
         }
         // Finding next shipId
         const eventRegistration = new EventRegistration(req.body);
         const regDone: IEventRegistration = await Validate.createRegistration(eventRegistration, res);
-        if (regDone == null) {
+        if (regDone === null) {
             return res.status(500).send({ message: "SUCKS FOR YOU" });
         }
         res.status(201).json(regDone);
@@ -612,7 +612,7 @@ app.post('/eventRegistrations/', async (req, res) => {
 
 // Retrieve all eventRegistrations
 app.get('/eventRegistrations/', async (req, res) => {
-    const verify: Boolean = await Auth.Authorize(req, res, "admin");
+    const verify: boolean = await Auth.Authorize(req, res, "admin");
     if (!verify) {
         return res.status(400).send({ auth: false, message: 'Not Authorized' });
     }
@@ -629,7 +629,7 @@ app.get('/eventRegistrations/', async (req, res) => {
 let pending: number = 0;
 app.get('/eventRegistrations/findEventRegFromUsername/:eventId', async (req, res) => {
     // Checking if authorized
-    const verify: Boolean = await Auth.Authorize(req, res, "admin");
+    const verify: boolean = await Auth.Authorize(req, res, "admin");
     if (!verify) {
         return res.status(400).send({ auth: false, message: 'Not Authorized' });
     }
@@ -644,11 +644,9 @@ app.get('/eventRegistrations/findEventRegFromUsername/:eventId', async (req, res
             __v: 0
         });
         shipByEmailUserName.forEach(async (ship: IShip) => {
-            pending++;
             const evId: any = req.params.eventId;
             const sId: any = ship.shipId;
-            const eventRegistration: IEventRegistration[] = await EventRegistration.find({ eventId: evId, shipId: sId }, { _id: 0, __v: 0 })
-            pending--;
+            const eventRegistration: IEventRegistration[] = await EventRegistration.find({ eventId: evId, shipId: sId }, { _id: 0, __v: 0 }) 
 
             eventRegistrations.push(eventRegistration)
         });
@@ -663,7 +661,7 @@ app.get('/eventRegistrations/findEventRegFromUsername/:eventId', async (req, res
 
 app.post('/eventRegistrations/signUp', async (req, res) => {
     // Checking if authorized
-    const verify: Boolean = await Auth.Authorize(req, res, "admin");
+    const verify: boolean = await Auth.Authorize(req, res, "admin");
     if (!verify) {
         return res.status(400).send({ auth: false, message: 'Not Authorized' });
     }
@@ -687,7 +685,7 @@ app.post('/eventRegistrations/signUp', async (req, res) => {
                 const registration = new EventRegistration(req.body);
                 registration.eventId = event.eventId;
                 const regDone: IEventRegistration = await Validate.createRegistration(registration, res);
-                if (regDone == null) {
+                if (regDone === null) {
                     return res.status(500).send({ message: "SUCKS FOR YOU" });
                 }
 
@@ -707,7 +705,7 @@ app.post('/eventRegistrations/signUp', async (req, res) => {
 
 app.delete('/eventRegistrations/:eventRegId', async (req, res) => {
     // Checking if authorized
-    const verify: Boolean = await Auth.Authorize(req, res, "all");
+    const verify: boolean = await Auth.Authorize(req, res, "all");
     if (!verify) {
         return res.status(400).send({ auth: false, message: 'Not Authorized' });
     }
@@ -728,7 +726,7 @@ app.delete('/eventRegistrations/:eventRegId', async (req, res) => {
 
 app.post('/eventRegistrations/addParticipant', async (req, res) => {
     // Checking if authorized
-    const verify: Boolean = await Auth.Authorize(req, res, "admin");
+    const verify: boolean = await Auth.Authorize(req, res, "admin");
     if (!verify) {
         return res.status(400).send({ auth: false, message: 'Not Authorized' });
     }
@@ -830,7 +828,7 @@ app.get('/eventRegistrations/getParticipants/:eventId', async (req, res) => {
 
 app.put('/eventRegistrations/updateParticipant/:eventRegId', async (req, res) => {
     // Checking if authorized
-    const verify: Boolean = await Auth.Authorize(req, res, "admin");
+    const verify: boolean = await Auth.Authorize(req, res, "admin");
     if (!verify) {
         return res.status(400).send({ auth: false, message: 'Not Authorized' });
     }
@@ -863,77 +861,175 @@ app.put('/eventRegistrations/updateParticipant/:eventRegId', async (req, res) =>
 
 app.post('/locationRegistrations/', async (req, res) => {
     // Checking if authorized
-    const verify: Boolean = await Auth.Authorize(req, res, "admin");
-    if (!verify) {
-        return res.status(400).send({auth: false, message: 'Not Authorized'});
-    }
-    try {
 
+    try {
+        // Creating the LocationRegistration
+        let locationRegistration: ILocationRegistration = req.body;
+        const val: boolean = await Validate.validateLocationForeignKeys(locationRegistration, res);
+        if (!val) {
+            return res.status(400).send({ message: 'Could not create' });
+        }
+        // Finding next regId
+        locationRegistration.locationTime.setHours(locationRegistration.locationTime.getHours() + 2);
+        const locationReg: ILocationRegistration = await Validate.CheckRacePoint(locationRegistration, res);
+        if (locationReg) {
+            locationRegistration = locationReg;
+        }
+        const one: any = 1;
+        const lastRegistration: ILocationRegistration = await LocationRegistration.findOne({}).sort('-desc');
+        if (lastRegistration)
+            locationRegistration.regId = lastRegistration.regId + one;
+        else
+            locationRegistration.regId = 1;
+
+        await locationRegistration.save();
+
+        return res.status(201).json(locationRegistration);
 
 
     } catch (e) {
         res.status(400).json('BAD REQUEST')
-    }});
+    }
+});
 
 app.get('/locationRegistrations/getLive/:eventId', async (req, res) => {
-    // Checking if authorized
-    const verify: Boolean = await Auth.Authorize(req, res, "admin");
-    if (!verify) {
-        return res.status(400).send({auth: false, message: 'Not Authorized'});
-    }
+
     try {
+        const evId: any = req.params.eventId;
+        const eventRegistrations: IEventRegistration[] = await EventRegistration.find({ eventId: evId }, { _id: 0, __v: 0 });
+
+
+        const fewRegistrations: any[] = [];
+        eventRegistrations.forEach(async (eventRegistration: IEventRegistration) => {
+
+
+            const locationRegistration: ILocationRegistration[] = await LocationRegistration.find({ eventRegId: eventRegistration.eventRegId }, { _id: 0, __v: 0 }, { sort: { 'locationTime': -1 }, limit: 20 });
+
+            if (locationRegistration.length !== 0) {
+                const boatLocations: any = { "locationsRegistrations": locationRegistration, "color": eventRegistration.trackColor, "shipId": eventRegistration.shipId, "teamName": eventRegistration.teamName };
+                fewRegistrations.push(boatLocations);
+
+            }
+        });
+        if (fewRegistrations.length !== 0) {
+            if (fewRegistrations[0].locationsRegistrations[0].raceScore !== 0) {
+                fewRegistrations.sort((a, b) => (a.locationsRegistrations[0].raceScore >= b.locationsRegistrations[0].raceScore) ? -1 : 1)
+
+                for (let i: any = 0; i < fewRegistrations.length; i++) {
+                    fewRegistrations[i].placement = i + 1;
+                }
+            } else {
+                fewRegistrations.sort((a, b) => (a.shipId > b.shipId) ? 1 : -1)
+
+            }
+        }
+        return res.status(200).json(fewRegistrations);
 
 
 
     } catch (e) {
         res.status(400).json('BAD REQUEST')
-    }});
-
-app.get('/locationRegistrations/getReplay/:eventId',async (req, res) => {
-    // Checking if authorized
-    const verify: Boolean = await Auth.Authorize(req, res, "admin");
-    if (!verify) {
-        return res.status(400).send({auth: false, message: 'Not Authorized'});
     }
+});
+
+app.get('/locationRegistrations/getReplay/:eventId', async (req, res) => {
+
     try {
+
+        const evId: any = req.params.eventId;
+        const eventRegistrations: IEventRegistration[] = await EventRegistration.find({ eventId: evId }, { _id: 0, __v: 0 });
+
+        if (eventRegistrations.length !== 0) {
+            const shipLocations: any[] = [];
+            eventRegistrations.forEach(async (eventRegistration: IEventRegistration) => {
+
+                const locationRegistrations: ILocationRegistration[] = await LocationRegistration.find({ eventRegId: eventRegistration.eventRegId }, { _id: 0, __v: 0 }, { sort: { 'locationTime': 1 } });
+
+
+                if (locationRegistrations) {
+                    const shipLocation = { "locationsRegistrations": locationRegistrations, "color": eventRegistration.trackColor, "shipId": eventRegistration.shipId, "teamName": eventRegistration.teamName }
+                    shipLocations.push(shipLocation)
+                }
+            });
+
+            return res.status(200).send(shipLocations);
+
+
+
+        } else {
+            return res.status(200).send(eventRegistrations);
+        }
 
 
 
     } catch (e) {
         res.status(400).json('BAD REQUEST')
-    }});
+    }
+});
 
 
 app.get('/locationRegistrations/getScoreboard/:eventId', async (req, res) => {
-    // Checking if authorized
-    const verify: Boolean = await Auth.Authorize(req, res, "admin");
-    if (!verify) {
-        return res.status(400).send({auth: false, message: 'Not Authorized'});
-    }
     try {
 
+        const evId: any = req.params.eventId;
+        const eventRegistrations: IEventRegistration[] = await EventRegistration.find({ eventId: evId }, { _id: 0, __v: 0 });
+        const scores: any[] = [];
+        if (eventRegistrations.length !== 0) {
 
+            eventRegistrations.forEach(async (eventReg: IEventRegistration) => {
 
+                const locationRegistration: ILocationRegistration[] = await LocationRegistration.find({ eventRegId: eventReg.eventRegId }, { _id: 0, __v: 0 }, { sort: { 'locationTime': -1 }, limit: 1 });
+                if (locationRegistration.length !== 0) {
+                    const ship: IShip = await Ship.findOne({ shipId: eventReg.shipId }, { _id: 0, __v: 0 });
+
+                    const user: IUser = await User.findOne({ emailUsername: ship.emailUsername }, { _id: 0, __v: 0 });
+
+                    if (user) {
+                        const score: any = { "locationsRegistrations": locationRegistration, "color": eventReg.trackColor, "shipId": eventReg.shipId, "shipName": ship.name, "teamName": eventReg.teamName, "owner": user.firstname + " " + user.lastname };
+                        scores.push(score);
+                    }
+                }
+            });
+
+            if (scores.length !== 0) {
+                if (scores[0].locationsRegistrations[0].raceScore !== 0) {
+                    scores.sort((a, b) => (a.locationsRegistrations[0].raceScore >= b.locationsRegistrations[0].raceScore) ? -1 : 1)
+
+                    for (let i: any = 0; i < scores.length; i++) {
+                        scores[i].placement = i + 1;
+                    }
+                }
+                else {
+                    scores.sort((a, b) => (a.shipId > b.shipId) ? 1 : -1)
+                }
+            }
+        }
+        return res.status(200).send(scores);
     } catch (e) {
         res.status(400).json('BAD REQUEST')
-    }});
+    }
+});
 
 app.delete('/locationRegistrations/deleteFromEventRegId/:eventId', async (req, res) => {
     // Checking if authorized
-    const verify: Boolean = await Auth.Authorize(req, res, "admin");
+    const verify: boolean = await Auth.Authorize(req, res, "user");
     if (!verify) {
-        return res.status(400).send({auth: false, message: 'Not Authorized'});
+        return res.status(400).send({ auth: false, message: 'Not Authorized' });
     }
     try {
 
+        // Finding and deleting the locationRegistrations with the given eventRegId
+        const evRegId: any = req.params.eventRegId;
+        await LocationRegistration.deleteMany({ eventRegId: evRegId }, {});
 
-
+        res.status(202).json('Deleted');
     } catch (e) {
         res.status(400).json('BAD REQUEST')
-    }});
+    }
+});
 
 
-    
+
 app.get('*', (req, res) => {
     return res.status(400).send('Page Not Found');
 });

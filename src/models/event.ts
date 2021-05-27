@@ -1,14 +1,14 @@
 import {model, Schema, Model, Document} from 'mongoose';
 
 interface IEvent extends Document {
-    eventId: Number,
-    name: String,
+    eventId: number,
+    name: string,
     eventStart: Date,
     eventEnd: Date,
-    city: String,
-    eventCode: String,
+    city: string,
+    eventCode: string,
     actualEventStart : Date,
-    isLive : Boolean
+    isLive : boolean
 }
 
 const EventSchema : Schema = new Schema({

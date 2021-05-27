@@ -1,13 +1,13 @@
 import {model, Schema, Model, Document} from 'mongoose';
 
 interface ILocationRegistration extends Document {
-    regId: Number,
-    eventRegId: Number,
+    regId: number,
+    eventRegId: number,
     locationTime: Date,
-    longtitude: Number,
-    latitude: Number,
-    racePointNumber : Number,
-    raceScore : Number,
+    longtitude: number,
+    latitude: number,
+    racePointNumber : number,
+    raceScore : number,
     finishTime : Date,
 }
 
