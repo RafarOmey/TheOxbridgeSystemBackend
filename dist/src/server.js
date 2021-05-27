@@ -44,11 +44,11 @@ const racePoint_1 = require("./models/racePoint");
 const accessToken_controller_1 = require("./controllers/accessToken.controller");
 const ship_1 = require("./models/ship");
 const user_1 = require("./models/user");
+const locationRegistration_1 = require("./models/locationRegistration");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jwt = __importStar(require("jsonwebtoken"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const validate_controller_1 = require("./controllers/validate.controller");
-const locationRegistration_1 = require("./models/locationRegistration");
 dotenv_1.default.config({ path: 'config/config.env' });
 const app = express_1.default();
 exports.app = app;
@@ -438,11 +438,11 @@ app.get('/users/:userName', (req, res) => __awaiter(void 0, void 0, void 0, func
 app.put('/users/:userName', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Updating the user
-        const hashedPassword = bcrypt_1.default.hashSync(req.body.password, 10);
+        // const hashedPassword = await bcrypt.hashSync(req.body.password, 10);
         const newUser = new user_1.User(req.body);
         const token = req.header('x-access-token');
         const user = accessToken_controller_1.AccessToken.getUser(token);
-        newUser.password = hashedPassword;
+        // newUser.password = hashedPassword;
         newUser.role = user.role;
         user_1.User.findOneAndUpdate({ emailUsername: newUser.emailUsername }, newUser);
         if (!user)
@@ -450,7 +450,7 @@ app.put('/users/:userName', (req, res) => __awaiter(void 0, void 0, void 0, func
         res.status(202).json(user);
     }
     catch (e) {
-        res.status(400).json('Test');
+        res.status(400).json('BAD REQUEST');
     }
 }));
 // Delete a User with the given emailUsername

@@ -475,12 +475,13 @@ app.get('/users/:userName', async (req, res) => {
 app.put('/users/:userName', async (req, res) => {
     try {
         // Updating the user
-        const hashedPassword = bcrypt.hashSync(req.body.password, 10);
+        // const hashedPassword = await bcrypt.hashSync(req.body.password, 10);
         const newUser = new User(req.body);
         const token: any = req.header('x-access-token');
         const user: any = AccessToken.getUser(token);
-        newUser.password = hashedPassword;
+        // newUser.password = hashedPassword;
         newUser.role = user.role;
+
 
         User.findOneAndUpdate({ emailUsername: newUser.emailUsername }, newUser);
         if (!user)
@@ -646,7 +647,7 @@ app.get('/eventRegistrations/findEventRegFromUsername/:eventId', async (req, res
         shipByEmailUserName.forEach(async (ship: IShip) => {
             const evId: any = req.params.eventId;
             const sId: any = ship.shipId;
-            const eventRegistration: IEventRegistration[] = await EventRegistration.find({ eventId: evId, shipId: sId }, { _id: 0, __v: 0 }) 
+            const eventRegistration: IEventRegistration[] = await EventRegistration.find({ eventId: evId, shipId: sId }, { _id: 0, __v: 0 })
 
             eventRegistrations.push(eventRegistration)
         });
