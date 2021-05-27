@@ -16,6 +16,7 @@ import bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import cookieParser from "cookie-parser";
 import { Validate } from "./controllers/validate.controller"
+import { Broadcast, IBroadcast } from "./models/broadcast";
 
 
 dotenv.config({ path: 'config/config.env' });
@@ -1028,6 +1029,52 @@ app.delete('/locationRegistrations/deleteFromEventRegId/:eventId', async (req, r
         res.status(400).json('BAD REQUEST')
     }
 });
+
+app.post('/broadcast/', async (req, res) => {
+    try {
+        const evId: any = req.params.eventId;
+        const eventRegs: IEventRegistration[] = await EventRegistration.find({ eventId: evId }, { _id: 0, __v: 0 });
+        if (!eventRegs || eventRegs.length === 0)
+            return res.status(404).send({ message: "No participants found" });
+
+        if (eventRegs.length !== 0) {
+            eventRegs.forEach(async (eventRegistration: IEventRegistration) => {
+
+
+                const ship: IShip = await Ship.findOne({ shipId: eventRegistration.shipId }, { _id: 0, __v: 0 });
+                if (!ship)
+                    return res.status(404).send({ message: "Ship not found" });
+
+                else if (ship) {
+                    const user: IUser = await User.findOne({ emailUsername: ship.emailUsername }, { _id: 0, __v: 0 });
+                    if (!user)
+                        return res.status(404).send({ message: "User not found" });
+
+                    if (user) {
+                        let participant = new Broadcast({
+                            "eventId": req.params.eventId,
+                            "message": req.params.message,
+                            "emailUsername": user.emailUsername,
+                            "hasBeenRead": false
+                        });
+                        await participant.save();
+
+
+                    }
+
+                }
+
+            });
+        }
+        res.status(201).send({ message: 'Broadcast successfully sent' });
+
+    } catch (e) {
+        res.status(400).json('BAD REQUEST');
+    }
+
+
+});
+
 
 
 
