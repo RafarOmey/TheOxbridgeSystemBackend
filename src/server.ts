@@ -249,12 +249,13 @@ app.post('/ships', async (req, res) => {
         const ship = new Ship(req.body);
 
         // Finding next shipId
-        const one: any = 1;
-        const lastShip: IShip = await Ship.findOne({}).sort('desc');
-        if (lastShip)
-            ship.shipId = lastShip.shipId + one;
-        else
+        const lastShip: IShip = await Ship.findOne({}).sort('shipId');
+        if (lastShip){
+            ship.shipId = lastShip.shipId + 1;
+        }
+        else{
             ship.shipId = 1;
+        }
 
         // Saving the new ship in the DB
         await ship.save()
@@ -1030,9 +1031,9 @@ app.delete('/locationRegistrations/deleteFromEventRegId/:eventId', async (req, r
     }
 });
 
-app.post('/broadcast/', async (req, res) => {
+app.post('/broadcast', async (req, res) => {
     try {
-        const evId: any = req.params.eventId;
+        const evId: any = req.body.eventId;
         const eventRegs: IEventRegistration[] = await EventRegistration.find({ eventId: evId }, { _id: 0, __v: 0 });
         if (!eventRegs || eventRegs.length === 0)
             return res.status(404).send({ message: "No participants found" });
@@ -1051,9 +1052,9 @@ app.post('/broadcast/', async (req, res) => {
                         return res.status(404).send({ message: "User not found" });
 
                     if (user) {
-                        let participant = new Broadcast({
-                            "eventId": req.params.eventId,
-                            "message": req.params.message,
+                        const participant = new Broadcast({
+                            "eventId": req.body.eventId,
+                            "message": req.body.message,
                             "emailUsername": user.emailUsername,
                             "hasBeenRead": false
                         });

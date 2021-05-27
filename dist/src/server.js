@@ -49,6 +49,7 @@ const bcrypt_1 = __importDefault(require("bcrypt"));
 const jwt = __importStar(require("jsonwebtoken"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const validate_controller_1 = require("./controllers/validate.controller");
+const broadcast_1 = require("./models/broadcast");
 dotenv_1.default.config({ path: 'config/config.env' });
 const app = express_1.default();
 exports.app = app;
@@ -247,11 +248,13 @@ app.post('/ships', (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         const ship = new ship_1.Ship(req.body);
         // Finding next shipId
         const one = 1;
-        const lastShip = yield ship_1.Ship.findOne({}).sort('desc');
-        if (lastShip)
+        const lastShip = yield ship_1.Ship.findOne({}).sort('shipId');
+        if (lastShip) {
             ship.shipId = lastShip.shipId + one;
-        else
+        }
+        else {
             ship.shipId = 1;
+        }
         // Saving the new ship in the DB
         yield ship.save();
         res.status(201).json(ship);
@@ -875,6 +878,39 @@ app.delete('/locationRegistrations/deleteFromEventRegId/:eventId', (req, res) =>
         const evRegId = req.params.eventRegId;
         yield locationRegistration_1.LocationRegistration.deleteMany({ eventRegId: evRegId }, {});
         res.status(202).json('Deleted');
+    }
+    catch (e) {
+        res.status(400).json('BAD REQUEST');
+    }
+}));
+app.post('/broadcast', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const evId = req.body.eventId;
+        const eventRegs = yield eventRegistration_1.EventRegistration.find({ eventId: evId }, { _id: 0, __v: 0 });
+        if (!eventRegs || eventRegs.length === 0)
+            return res.status(404).send({ message: "No participants found" });
+        if (eventRegs.length !== 0) {
+            eventRegs.forEach((eventRegistration) => __awaiter(void 0, void 0, void 0, function* () {
+                const ship = yield ship_1.Ship.findOne({ shipId: eventRegistration.shipId }, { _id: 0, __v: 0 });
+                if (!ship)
+                    return res.status(404).send({ message: "Ship not found" });
+                else if (ship) {
+                    const user = yield user_1.User.findOne({ emailUsername: ship.emailUsername }, { _id: 0, __v: 0 });
+                    if (!user)
+                        return res.status(404).send({ message: "User not found" });
+                    if (user) {
+                        const participant = new broadcast_1.Broadcast({
+                            "eventId": req.body.eventId,
+                            "message": req.body.message,
+                            "emailUsername": user.emailUsername,
+                            "hasBeenRead": false
+                        });
+                        yield participant.save();
+                    }
+                }
+            }));
+        }
+        res.status(201).send({ message: 'Broadcast successfully sent' });
     }
     catch (e) {
         res.status(400).json('BAD REQUEST');
