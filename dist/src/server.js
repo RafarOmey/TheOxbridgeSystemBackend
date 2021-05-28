@@ -247,10 +247,9 @@ app.post('/ships', (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         }
         const ship = new ship_1.Ship(req.body);
         // Finding next shipId
-        const one = 1;
         const lastShip = yield ship_1.Ship.findOne({}).sort('shipId');
         if (lastShip) {
-            ship.shipId = lastShip.shipId + one;
+            ship.shipId = lastShip.shipId + 1;
         }
         else {
             ship.shipId = 1;
@@ -312,7 +311,7 @@ app.get('/ships/myShips/fromUsername', (req, res) => __awaiter(void 0, void 0, v
     try {
         const token = req.header('x-access-token');
         const user = accessToken_controller_1.AccessToken.getUser(token);
-        const ships = yield ship_1.Ship.find({ emailUsername: user.emailUsername }, { _id: 0, __v: 0 });
+        const ships = yield ship_1.Ship.find({}, { _id: 0, __v: 0 });
         res.status(200).send(ships);
     }
     catch (e) {
@@ -911,6 +910,22 @@ app.post('/broadcast', (req, res) => __awaiter(void 0, void 0, void 0, function*
             }));
         }
         res.status(201).send({ message: 'Broadcast successfully sent' });
+    }
+    catch (e) {
+        res.status(400).json('BAD REQUEST');
+    }
+}));
+// get by Username
+app.post('/broadcastget/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        console.log('IM ALIVE');
+        const username = req.body.Username;
+        console.log('IM ALIVE');
+        const broadcasts = yield broadcast_1.Broadcast.find({ emailUsername: username }, { _id: 0, __v: 0 });
+        console.log('IM ALIVE');
+        yield broadcast_1.Broadcast.deleteMany({ emailUsername: username });
+        console.log('IM ALIVE');
+        res.status(200).json(broadcasts);
     }
     catch (e) {
         res.status(400).json('BAD REQUEST');

@@ -329,7 +329,7 @@ app.get('/ships/myShips/fromUsername', async (req, res) => {
     try {
         const token: any = req.header('x-access-token');
         const user: any = AccessToken.getUser(token);
-        const ships: IShip[] = await Ship.find({ emailUsername: user.emailUsername }, { _id: 0, __v: 0 });
+        const ships: IShip[] = await Ship.find({}, { _id: 0, __v: 0 });
         res.status(200).send(ships);
     } catch (e) {
         res.status(400).json('BAD REQUEST')
@@ -1055,8 +1055,7 @@ app.post('/broadcast', async (req, res) => {
                         const participant = new Broadcast({
                             "eventId": req.body.eventId,
                             "message": req.body.message,
-                            "emailUsername": user.emailUsername,
-                            "hasBeenRead": false
+                            "emailUsername": user.emailUsername
                         });
                         await participant.save();
 
@@ -1075,8 +1074,18 @@ app.post('/broadcast', async (req, res) => {
 
 
 });
+// get by Username
+app.post('/broadcastget/', async (req, res) => {
+    try{
+        const username:any = req.body.Username;
+        const broadcasts:IBroadcast[] = await Broadcast.find({emailUsername:username}, { _id: 0, __v: 0 });
+        await Broadcast.deleteMany({emailUsername:username});
+        res.status(200).json(broadcasts);
 
-
+    }catch(e){
+        res.status(400).json('BAD REQUEST')
+    }
+});
 
 
 app.get('*', (req, res) => {
