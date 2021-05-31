@@ -487,9 +487,9 @@ app.put('/users/:userName', async (req, res) => {
 
 
         User.findOneAndUpdate({ emailUsername: newUser.emailUsername }, newUser);
-        if (!user)
-            return res.status(404).send({ message: "User not found with id " + req.params.emailUsername });
-
+        // if (!user){
+        //     return res.status(404).send({ message: "User not found with id " + req.params.emailUsername });
+        // }
         res.status(202).json(user);
 
     } catch (e) {
