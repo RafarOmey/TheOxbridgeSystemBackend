@@ -490,7 +490,7 @@ app.put('/users/:userName', async (req, res) => {
         // if (!user){
         //     return res.status(404).send({ message: "User not found with id " + req.params.emailUsername });
         // }
-        res.status(202).json(user);
+        res.status(202).json(newUser);
 
     } catch (e) {
         res.status(400).json('BAD REQUEST')
