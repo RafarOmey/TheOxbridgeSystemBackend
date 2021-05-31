@@ -45,11 +45,12 @@ const accessToken_controller_1 = require("./controllers/accessToken.controller")
 const ship_1 = require("./models/ship");
 const user_1 = require("./models/user");
 const locationRegistration_1 = require("./models/locationRegistration");
-const bcrypt_1 = __importDefault(require("bcrypt"));
+const bcrypt_nodejs_1 = __importDefault(require("bcrypt-nodejs"));
 const jwt = __importStar(require("jsonwebtoken"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const validate_controller_1 = require("./controllers/validate.controller");
 const broadcast_1 = require("./models/broadcast");
+const nodemailer_1 = __importDefault(require("nodemailer"));
 dotenv_1.default.config({ path: 'config/config.env' });
 const app = express_1.default();
 exports.app = app;
@@ -440,11 +441,11 @@ app.get('/users/:userName', (req, res) => __awaiter(void 0, void 0, void 0, func
 app.put('/users/:userName', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Updating the user
-        // const hashedPassword = await bcrypt.hashSync(req.body.password, 10);
+        const hashedPassword = yield bcrypt_nodejs_1.default.hashSync(req.body.password);
         const newUser = new user_1.User(req.body);
         const token = req.header('x-access-token');
         const user = accessToken_controller_1.AccessToken.getUser(token);
-        // newUser.password = hashedPassword;
+        newUser.password = hashedPassword;
         newUser.role = user.role;
         user_1.User.findOneAndUpdate({ emailUsername: newUser.emailUsername }, newUser);
         if (!user)
@@ -481,7 +482,7 @@ app.post('/users/registerAdmin', (req, res) => __awaiter(void 0, void 0, void 0,
         if (users)
             return res.status(409).send({ message: "User with that username already exists" });
         // Creating the new user
-        const hashedPassword = bcrypt_1.default.hashSync(req.body.password, 10);
+        const hashedPassword = bcrypt_nodejs_1.default.hashSync(req.body.password);
         const user = new user_1.User(req.body);
         user.password = hashedPassword;
         user.role = "admin";
@@ -501,7 +502,7 @@ app.post('/users/register', (req, res) => __awaiter(void 0, void 0, void 0, func
         if (isUser)
             return res.status(409).send({ message: "User with that username already exists" });
         // Creating the user
-        const hashedPassword = bcrypt_1.default.hashSync(req.body.password, 10);
+        const hashedPassword = bcrypt_nodejs_1.default.hashSync(req.body.password);
         const user = new user_1.User(req.body);
         user.password = hashedPassword;
         user.role = "user";
@@ -523,7 +524,7 @@ app.post('/users/login', (req, res) => __awaiter(void 0, void 0, void 0, functio
             return res.status(403).json('Username incorrect');
         }
         const userpw = user.password;
-        const passwordIsValid = bcrypt_1.default.compareSync(req.body.password, userpw);
+        const passwordIsValid = bcrypt_nodejs_1.default.compareSync(req.body.password, userpw);
         if (!passwordIsValid) {
             return res.status(401).send({ auth: false, token: null, message: "Invalid password" });
         }
@@ -656,7 +657,7 @@ app.post('/eventRegistrations/addParticipant', (req, res) => __awaiter(void 0, v
         // Creates a user if no user corresponding to the given emailUsername found
         const user = yield user_1.User.findOne({ emailUsername: req.body.emailUsername }, { _id: 0, __v: 0 });
         if (!user) {
-            const hashedPassword = bcrypt_1.default.hashSync("1234", 10);
+            const hashedPassword = bcrypt_nodejs_1.default.hashSync("1234");
             const newUser = new user_1.User({ "emailUsername": req.body.emailUsername, "firstname": req.body.firstname, "lastname": req.body.lastname, "password": hashedPassword, "role": "user" });
             newUser.save();
         }
@@ -901,8 +902,7 @@ app.post('/broadcast', (req, res) => __awaiter(void 0, void 0, void 0, function*
                         const participant = new broadcast_1.Broadcast({
                             "eventId": req.body.eventId,
                             "message": req.body.message,
-                            "emailUsername": user.emailUsername,
-                            "hasBeenRead": false
+                            "emailUsername": user.emailUsername
                         });
                         yield participant.save();
                     }
@@ -918,18 +918,37 @@ app.post('/broadcast', (req, res) => __awaiter(void 0, void 0, void 0, function*
 // get by Username
 app.post('/broadcastget/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        console.log('IM ALIVE');
         const username = req.body.Username;
-        console.log('IM ALIVE');
         const broadcasts = yield broadcast_1.Broadcast.find({ emailUsername: username }, { _id: 0, __v: 0 });
-        console.log('IM ALIVE');
         yield broadcast_1.Broadcast.deleteMany({ emailUsername: username });
-        console.log('IM ALIVE');
         res.status(200).json(broadcasts);
     }
     catch (e) {
         res.status(400).json('BAD REQUEST');
     }
+}));
+app.post('/sendmail', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const testAccount = yield nodemailer_1.default.createTestAccount();
+    // Transporter object using SMTP transport
+    const transporter = nodemailer_1.default.createTransport({
+        host: "smtp.office365.com",
+        port: 587,
+        secure: false,
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PSW,
+        },
+    });
+    // sending mail with defined transport object
+    const info = yield transporter.sendMail({
+        from: '"Tregatta" <andr97e6@easv365.dk>',
+        to: req.body.email,
+        subject: "Event Participation Confirmation",
+        text: "your team - " + req.body.teamName + ", is now listed in the event " + req.body.eventName + ", with the boat " + req.body.boatName + ".", // text body
+        // html: "<p> some html </p>" // html in the body
+    });
+    console.log('Message sent:', info.messageId);
+    res.status(201).json('email sent');
 }));
 app.get('*', (req, res) => {
     return res.status(400).send('Page Not Found');

@@ -5,18 +5,19 @@ import * as mongoose from 'mongoose';
 import * as bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 import { Event, IEvent } from "./models/event";
-import { Auth } from './controllers/authentication.controller'
-import { EventRegistration, IEventRegistration } from './models/eventRegistration'
-import { RacePoint, IRacePoint } from './models/racePoint'
+import { Auth } from './controllers/authentication.controller';
+import { EventRegistration, IEventRegistration } from './models/eventRegistration';
+import { RacePoint, IRacePoint } from './models/racePoint';
 import { AccessToken } from "./controllers/accessToken.controller";
 import { Ship, IShip } from './models/ship'
 import { IUser, User } from "./models/user";
 import { ILocationRegistration, LocationRegistration } from "./models/locationRegistration";
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt-nodejs';
 import * as jwt from 'jsonwebtoken';
 import cookieParser from "cookie-parser";
-import { Validate } from "./controllers/validate.controller"
+import { Validate } from "./controllers/validate.controller";
 import { Broadcast, IBroadcast } from "./models/broadcast";
+import nodemailer from 'nodemailer';
 
 
 dotenv.config({ path: 'config/config.env' });
@@ -250,10 +251,10 @@ app.post('/ships', async (req, res) => {
 
         // Finding next shipId
         const lastShip: IShip = await Ship.findOne({}).sort('shipId');
-        if (lastShip){
+        if (lastShip) {
             ship.shipId = lastShip.shipId + 1;
         }
-        else{
+        else {
             ship.shipId = 1;
         }
 
@@ -477,11 +478,11 @@ app.get('/users/:userName', async (req, res) => {
 app.put('/users/:userName', async (req, res) => {
     try {
         // Updating the user
-        // const hashedPassword = await bcrypt.hashSync(req.body.password, 10);
+        const hashedPassword = await bcrypt.hashSync(req.body.password);
         const newUser = new User(req.body);
         const token: any = req.header('x-access-token');
         const user: any = AccessToken.getUser(token);
-        // newUser.password = hashedPassword;
+        newUser.password = hashedPassword;
         newUser.role = user.role;
 
 
@@ -525,7 +526,7 @@ app.post('/users/registerAdmin', async (req, res) => {
             return res.status(409).send({ message: "User with that username already exists" });
 
         // Creating the new user
-        const hashedPassword = bcrypt.hashSync(req.body.password, 10);
+        const hashedPassword = bcrypt.hashSync(req.body.password);
         const user = new User(req.body);
         user.password = hashedPassword;
         user.role = "admin";
@@ -550,7 +551,7 @@ app.post('/users/register', async (req, res) => {
             return res.status(409).send({ message: "User with that username already exists" });
 
         // Creating the user
-        const hashedPassword = bcrypt.hashSync(req.body.password, 10);
+        const hashedPassword = bcrypt.hashSync(req.body.password);
         const user = new User(req.body);
         user.password = hashedPassword;
         user.role = "user";
@@ -664,7 +665,7 @@ app.get('/eventRegistrations/findEventRegFromUsername/:eventId', async (req, res
 
 app.post('/eventRegistrations/signUp', async (req, res) => {
     // Checking if authorized
-    const verify: boolean = await Auth.Authorize(req, res, "admin");
+    const verify: boolean = await Auth.Authorize(req, res, "all");
     if (!verify) {
         return res.status(400).send({ auth: false, message: 'Not Authorized' });
     }
@@ -691,6 +692,26 @@ app.post('/eventRegistrations/signUp', async (req, res) => {
                 if (regDone === null) {
                     return res.status(500).send({ message: "SUCKS FOR YOU" });
                 }
+
+                // Transporter object using SMTP transport
+                const transporter = nodemailer.createTransport({
+                    host: "smtp.office365.com",
+                    port: 587,
+                    secure: false, // true for 465, false for other ports
+                    auth: {
+                        user: process.env.EMAIL_USER,
+                        pass: process.env.EMAIL_PSW,
+                    },
+                });
+
+                // sending mail with defined transport object
+                const info = await transporter.sendMail({
+                    from: '"Tregatta" <andr97e6@easv365.dk>', // sender address
+                    to: req.body.email, //
+                    subject: "Event Participation Confirmation", // subject line
+                    text: "your team - " + req.body.teamName + ", is now listed in the event " + req.body.eventName + ", with the boat " + req.body.boatName + ".", // text body
+                    // html: "<p> some html </p>" // html in the body
+                });
 
                 return res.status(201).json(regDone);
 
@@ -738,7 +759,7 @@ app.post('/eventRegistrations/addParticipant', async (req, res) => {
         const user: IUser = await User.findOne({ emailUsername: req.body.emailUsername }, { _id: 0, __v: 0 });
         if (!user) {
 
-            const hashedPassword = bcrypt.hashSync("1234", 10);
+            const hashedPassword = bcrypt.hashSync("1234");
             const newUser = new User({ "emailUsername": req.body.emailUsername, "firstname": req.body.firstname, "lastname": req.body.lastname, "password": hashedPassword, "role": "user" });
 
             newUser.save();
@@ -1076,15 +1097,42 @@ app.post('/broadcast', async (req, res) => {
 });
 // get by Username
 app.post('/broadcastget/', async (req, res) => {
-    try{
-        const username:any = req.body.Username;
-        const broadcasts:IBroadcast[] = await Broadcast.find({emailUsername:username}, { _id: 0, __v: 0 });
-        await Broadcast.deleteMany({emailUsername:username});
+    try {
+        const username: any = req.body.Username;
+        const broadcasts: IBroadcast[] = await Broadcast.find({ emailUsername: username }, { _id: 0, __v: 0 });
+        await Broadcast.deleteMany({ emailUsername: username });
         res.status(200).json(broadcasts);
 
-    }catch(e){
+    } catch (e) {
         res.status(400).json('BAD REQUEST')
     }
+});
+
+app.post('/sendmail', async (req, res) => {
+    const testAccount = await nodemailer.createTestAccount();
+
+    // Transporter object using SMTP transport
+    const transporter = nodemailer.createTransport({
+        host: "smtp.office365.com",
+        port: 587,
+        secure: false, // true for 465, false for other ports
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PSW,
+        },
+    });
+
+    // sending mail with defined transport object
+    const info = await transporter.sendMail({
+        from: '"Tregatta" <andr97e6@easv365.dk>', // sender address
+        to: req.body.email, //
+        subject: "Event Participation Confirmation", // subject line
+        text: "your team - " + req.body.teamName + ", is now listed in the event " + req.body.eventName + ", with the boat " + req.body.boatName + ".", // text body
+        // html: "<p> some html </p>" // html in the body
+    });
+
+    console.log('Message sent:', info.messageId);
+    res.status(201).json('email sent');
 });
 
 
