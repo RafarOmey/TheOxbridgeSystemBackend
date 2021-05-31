@@ -24,12 +24,12 @@ export class Validate {
 
     static async createRegistration(newRegistration: IEventRegistration, res: express.Response): Promise<IEventRegistration> {
 
-        const val: boolean = await this.validateEventForeignKeys(newRegistration, res);
-        if (!val) {
-            return null;
-        }
+        // const val: boolean = await this.validateEventForeignKeys(newRegistration, res);
+        // if (!val) {
+        //     return null;
+        // }
         // Finding next eventRegId
-        const lastEventRegistration: IEventRegistration = await EventRegistration.findOne({}).sort('-desc');
+        const lastEventRegistration: IEventRegistration = await EventRegistration.findOne({}).sort('desc');
         const one: any = 1;
         if (lastEventRegistration)
             newRegistration.eventRegId = lastEventRegistration.eventRegId + one;

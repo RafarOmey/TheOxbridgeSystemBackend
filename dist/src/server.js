@@ -597,12 +597,8 @@ app.get('/eventRegistrations/findEventRegFromUsername/:eventId', (req, res) => _
         res.status(400).json('BAD REQUEST');
     }
 }));
-app.post('/eventRegistrations/signUp', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+app.post('/eventRegistrations/signup', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // Checking if authorized
-    const verify = yield authentication_controller_1.Auth.Authorize(req, res, "admin");
-    if (!verify) {
-        return res.status(400).send({ auth: false, message: 'Not Authorized' });
-    }
     try {
         // Checks that the eventCode is correct
         const event = yield event_1.Event.findOne({ eventCode: req.body.eventCode }, { _id: 0, __v: 0 });
@@ -621,6 +617,26 @@ app.post('/eventRegistrations/signUp', (req, res) => __awaiter(void 0, void 0, v
                 if (regDone === null) {
                     return res.status(500).send({ message: "SUCKS FOR YOU" });
                 }
+                const ship = yield ship_1.Ship.findOne({ shipId: req.body.shipId });
+                const testAccount = yield nodemailer_1.default.createTestAccount();
+                // Transporter object using SMTP transport
+                const transporter = nodemailer_1.default.createTransport({
+                    host: "smtp.office365.com",
+                    port: 587,
+                    secure: false,
+                    auth: {
+                        user: process.env.EMAIL_USER,
+                        pass: process.env.EMAIL_PSW,
+                    },
+                });
+                // sending mail with defined transport object
+                const info = yield transporter.sendMail({
+                    from: '"Tregatta" <andr97e6@easv365.dk>',
+                    to: req.body.emailUsername,
+                    subject: "Event Participation Confirmation",
+                    text: "your team - " + req.body.teamName + ", is now listed in the event " + event.name + ", with the boat " + ship.name + ".", // text body
+                    // html: "<p> some html </p>" // html in the body
+                });
                 return res.status(201).json(regDone);
             }
         }
@@ -927,28 +943,36 @@ app.post('/broadcastget/', (req, res) => __awaiter(void 0, void 0, void 0, funct
         res.status(400).json('BAD REQUEST');
     }
 }));
-app.post('/sendmail', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const testAccount = yield nodemailer_1.default.createTestAccount();
-    // Transporter object using SMTP transport
-    const transporter = nodemailer_1.default.createTransport({
-        host: "smtp.office365.com",
-        port: 587,
-        secure: false,
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PSW,
-        },
-    });
-    // sending mail with defined transport object
-    const info = yield transporter.sendMail({
-        from: '"Tregatta" <andr97e6@easv365.dk>',
-        to: req.body.email,
-        subject: "Event Participation Confirmation",
-        text: "your team - " + req.body.teamName + ", is now listed in the event " + req.body.eventName + ", with the boat " + req.body.boatName + ".", // text body
-        // html: "<p> some html </p>" // html in the body
-    });
-    console.log('Message sent:', info.messageId);
-    res.status(201).json('email sent');
+app.put('/forgotpass', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const transporter = nodemailer_1.default.createTransport({
+            host: "smtp.office365.com",
+            port: 587,
+            secure: false,
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PSW,
+            },
+        });
+        // sending mail with defined transport object
+        const info = yield transporter.sendMail({
+            from: '"Tregatta" <andr97e6@easv365.dk>',
+            to: req.body.emailUsername,
+            subject: "Forgotten password",
+            text: "Seems like you forgot your password! here's a new one: 1234", // text body
+            // html: "<p> some html </p>" // html in the body
+        });
+        // Updating the user
+        const hashedPassword = yield bcrypt_nodejs_1.default.hashSync("1234");
+        const update = yield user_1.User.findOneAndUpdate({ emailUsername: req.body.emailUsername }, { password: hashedPassword });
+        // if (!user){
+        //     return res.status(404).send({ message: "User not found with id " + req.params.emailUsername });
+        // }
+        res.status(200).send({ update });
+    }
+    catch (e) {
+        res.status(400).json('BAD REQUEST');
+    }
 }));
 app.get('*', (req, res) => {
     return res.status(400).send('Page Not Found');

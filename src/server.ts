@@ -663,12 +663,9 @@ app.get('/eventRegistrations/findEventRegFromUsername/:eventId', async (req, res
     }
 });
 
-app.post('/eventRegistrations/signUp', async (req, res) => {
+app.post('/eventRegistrations/signup', async (req, res) => {
     // Checking if authorized
-    const verify: boolean = await Auth.Authorize(req, res, "all");
-    if (!verify) {
-        return res.status(400).send({ auth: false, message: 'Not Authorized' });
-    }
+
     try {
 
         // Checks that the eventCode is correct
@@ -693,6 +690,10 @@ app.post('/eventRegistrations/signUp', async (req, res) => {
                     return res.status(500).send({ message: "SUCKS FOR YOU" });
                 }
 
+                const ship: IShip = await Ship.findOne({ shipId: req.body.shipId });
+
+                const testAccount = await nodemailer.createTestAccount();
+
                 // Transporter object using SMTP transport
                 const transporter = nodemailer.createTransport({
                     host: "smtp.office365.com",
@@ -707,9 +708,9 @@ app.post('/eventRegistrations/signUp', async (req, res) => {
                 // sending mail with defined transport object
                 const info = await transporter.sendMail({
                     from: '"Tregatta" <andr97e6@easv365.dk>', // sender address
-                    to: req.body.email, //
+                    to: req.body.emailUsername, //
                     subject: "Event Participation Confirmation", // subject line
-                    text: "your team - " + req.body.teamName + ", is now listed in the event " + req.body.eventName + ", with the boat " + req.body.boatName + ".", // text body
+                    text: "your team - " + req.body.teamName + ", is now listed in the event " + event.name + ", with the boat " + ship.name + ".", // text body
                     // html: "<p> some html </p>" // html in the body
                 });
 
@@ -1095,7 +1096,7 @@ app.post('/broadcast', async (req, res) => {
 
 
 });
-// get by Username
+//NEW FEATURE: Broadcast message
 app.post('/broadcastget/', async (req, res) => {
     try {
         const username: any = req.body.Username;
@@ -1108,33 +1109,42 @@ app.post('/broadcastget/', async (req, res) => {
     }
 });
 
-app.post('/sendmail', async (req, res) => {
-    const testAccount = await nodemailer.createTestAccount();
+//NEW FEATURE: forgot password
+app.put('/forgotpass', async (req, res) => {
+    try {
+        const transporter = nodemailer.createTransport({
+            host: "smtp.office365.com",
+            port: 587,
+            secure: false, // true for 465, false for other ports
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PSW,
+            },
+        });
+        // sending mail with defined transport object
+        const info = await transporter.sendMail({
+            from: '"Tregatta" <andr97e6@easv365.dk>', // sender address
+            to: req.body.emailUsername, //
+            subject: "Forgotten password", // subject line
+            text: "Seems like you forgot your password! here's a new one: 1234", // text body
+            // html: "<p> some html </p>" // html in the body
+        });
+        // Updating the user
+        const hashedPassword = await bcrypt.hashSync("1234");
+        await User.findOneAndUpdate({ emailUsername: req.body.emailUsername }, {password:hashedPassword});
 
-    // Transporter object using SMTP transport
-    const transporter = nodemailer.createTransport({
-        host: "smtp.office365.com",
-        port: 587,
-        secure: false, // true for 465, false for other ports
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PSW,
-        },
-    });
 
-    // sending mail with defined transport object
-    const info = await transporter.sendMail({
-        from: '"Tregatta" <andr97e6@easv365.dk>', // sender address
-        to: req.body.email, //
-        subject: "Event Participation Confirmation", // subject line
-        text: "your team - " + req.body.teamName + ", is now listed in the event " + req.body.eventName + ", with the boat " + req.body.boatName + ".", // text body
-        // html: "<p> some html </p>" // html in the body
-    });
+        // if (!user){
+        //     return res.status(404).send({ message: "User not found with id " + req.params.emailUsername });
+        // }
+        res.status(200).send({message: 'Email sent'});
 
-    console.log('Message sent:', info.messageId);
-    res.status(201).json('email sent');
+
+
+    } catch (e) {
+        res.status(400).json('BAD REQUEST')
+    }
 });
-
 
 app.get('*', (req, res) => {
     return res.status(400).send('Page Not Found');

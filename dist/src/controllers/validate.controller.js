@@ -32,12 +32,12 @@ class Validate {
     }
     static createRegistration(newRegistration, res) {
         return __awaiter(this, void 0, void 0, function* () {
-            const val = yield this.validateEventForeignKeys(newRegistration, res);
-            if (!val) {
-                return null;
-            }
+            // const val: boolean = await this.validateEventForeignKeys(newRegistration, res);
+            // if (!val) {
+            //     return null;
+            // }
             // Finding next eventRegId
-            const lastEventRegistration = yield eventRegistration_1.EventRegistration.findOne({}).sort('-desc');
+            const lastEventRegistration = yield eventRegistration_1.EventRegistration.findOne({}).sort('desc');
             const one = 1;
             if (lastEventRegistration)
                 newRegistration.eventRegId = lastEventRegistration.eventRegId + one;
