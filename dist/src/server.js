@@ -90,7 +90,7 @@ app.post('/events', (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         }
         const event = new event_1.Event(req.body);
         const one = 1;
-        const lastEvent = yield event_1.Event.findOne({}).sort('desc');
+        const lastEvent = yield event_1.Event.findOne({}, {}, {});
         if (lastEvent) {
             event.eventId = lastEvent.eventId + one;
         }
@@ -248,7 +248,7 @@ app.post('/ships', (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         }
         const ship = new ship_1.Ship(req.body);
         // Finding next shipId
-        const lastShip = yield ship_1.Ship.findOne({}).sort('shipId');
+        const lastShip = yield ship_1.Ship.findOne({}, {}, { sort: { shipId: -1 } });
         if (lastShip) {
             ship.shipId = lastShip.shipId + 1;
         }
@@ -441,16 +441,17 @@ app.get('/users/:userName', (req, res) => __awaiter(void 0, void 0, void 0, func
 app.put('/users/:userName', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Updating the user
-        const hashedPassword = yield bcrypt_nodejs_1.default.hashSync(req.body.password);
+        // const hashedPassword = await bcrypt.hashSync(req.body.password);
         const newUser = new user_1.User(req.body);
         const token = req.header('x-access-token');
         const user = accessToken_controller_1.AccessToken.getUser(token);
-        newUser.password = hashedPassword;
+        // newUser.password = hashedPassword;
         newUser.role = user.role;
-        user_1.User.findOneAndUpdate({ emailUsername: newUser.emailUsername }, newUser);
-        if (!user)
-            return res.status(404).send({ message: "User not found with id " + req.params.emailUsername });
-        res.status(202).json(user);
+        yield user_1.User.findOneAndUpdate({ emailUsername: newUser.emailUsername }, { newUser });
+        // if (!user){
+        //     return res.status(404).send({ message: "User not found with id " + req.params.emailUsername });
+        // }
+        res.status(202).json(newUser);
     }
     catch (e) {
         res.status(400).json('BAD REQUEST');
@@ -931,7 +932,7 @@ app.post('/broadcast', (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.status(400).json('BAD REQUEST');
     }
 }));
-// get by Username
+// NEW FEATURE: Broadcast message
 app.post('/broadcastget/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const username = req.body.Username;
@@ -943,6 +944,7 @@ app.post('/broadcastget/', (req, res) => __awaiter(void 0, void 0, void 0, funct
         res.status(400).json('BAD REQUEST');
     }
 }));
+// NEW FEATURE: forgot password
 app.put('/forgotpass', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const transporter = nodemailer_1.default.createTransport({
@@ -964,11 +966,11 @@ app.put('/forgotpass', (req, res) => __awaiter(void 0, void 0, void 0, function*
         });
         // Updating the user
         const hashedPassword = yield bcrypt_nodejs_1.default.hashSync("1234");
-        const update = yield user_1.User.findOneAndUpdate({ emailUsername: req.body.emailUsername }, { password: hashedPassword });
+        yield user_1.User.findOneAndUpdate({ emailUsername: req.body.emailUsername }, { password: hashedPassword });
         // if (!user){
         //     return res.status(404).send({ message: "User not found with id " + req.params.emailUsername });
         // }
-        res.status(200).send({ update });
+        res.status(200).send({ message: 'Email sent' });
     }
     catch (e) {
         res.status(400).json('BAD REQUEST');

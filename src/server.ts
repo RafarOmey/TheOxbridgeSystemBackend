@@ -67,7 +67,7 @@ app.post('/events', async (req, res) => {
         }
         const event = new Event(req.body);
         const one: any = 1;
-        const lastEvent: IEvent = await Event.findOne({}).sort('desc');
+        const lastEvent: IEvent = await Event.findOne({},{},{});
 
         if (lastEvent) {
             event.eventId = lastEvent.eventId + one;
@@ -250,7 +250,7 @@ app.post('/ships', async (req, res) => {
         const ship = new Ship(req.body);
 
         // Finding next shipId
-        const lastShip: IShip = await Ship.findOne({}).sort('shipId');
+        const lastShip: IShip = await Ship.findOne({},{},{sort:{shipId:-1}});
         if (lastShip) {
             ship.shipId = lastShip.shipId + 1;
         }
@@ -411,7 +411,7 @@ app.post('/racepoints/createRoute/:eventId', async (req, res) => {
 
         const racePoints = req.body;
         if (Array.isArray(racePoints)) {
-            const lastRacePoint: IRacePoint = await RacePoint.findOne({}).sort('desc');
+            const lastRacePoint: IRacePoint = await RacePoint.findOne({},{},{sort:{racepointId:-1}});
             let racepointId: number;
             const lastRaceP: any = lastRacePoint.racePointId;
             if (lastRacePoint)
@@ -478,15 +478,21 @@ app.get('/users/:userName', async (req, res) => {
 app.put('/users/:userName', async (req, res) => {
     try {
         // Updating the user
-        const hashedPassword = await bcrypt.hashSync(req.body.password);
+        // const hashedPassword = await bcrypt.hashSync(req.body.password);
+
         const newUser = new User(req.body);
+
         const token: any = req.header('x-access-token');
+
         const user: any = AccessToken.getUser(token);
-        newUser.password = hashedPassword;
+
+        // newUser.password = hashedPassword;
+
         newUser.role = user.role;
 
 
-        User.findOneAndUpdate({ emailUsername: newUser.emailUsername }, newUser);
+        await User.findOneAndUpdate({ emailUsername: newUser.emailUsername }, {newUser});
+
         // if (!user){
         //     return res.status(404).send({ message: "User not found with id " + req.params.emailUsername });
         // }
@@ -772,7 +778,7 @@ app.post('/eventRegistrations/addParticipant', async (req, res) => {
 
             const newShip = new Ship({ "name": req.body.shipName, "emailUsername": req.body.emailUsername });
 
-            const lastShip: IShip = await Ship.findOne({}).sort('-desc');
+            const lastShip: IShip = await Ship.findOne({},{},{sort:{shipId:-1}});
             const one: any = 1;
             if (lastShip)
                 newShip.shipId = lastShip.shipId + one;
@@ -901,7 +907,7 @@ app.post('/locationRegistrations/', async (req, res) => {
             locationRegistration = locationReg;
         }
         const one: any = 1;
-        const lastRegistration: ILocationRegistration = await LocationRegistration.findOne({}).sort('-desc');
+        const lastRegistration: ILocationRegistration = await LocationRegistration.findOne({},{},{sort:{regId:-1}});
         if (lastRegistration)
             locationRegistration.regId = lastRegistration.regId + one;
         else
@@ -1096,7 +1102,7 @@ app.post('/broadcast', async (req, res) => {
 
 
 });
-//NEW FEATURE: Broadcast message
+// NEW FEATURE: Broadcast message
 app.post('/broadcastget/', async (req, res) => {
     try {
         const username: any = req.body.Username;
@@ -1109,7 +1115,7 @@ app.post('/broadcastget/', async (req, res) => {
     }
 });
 
-//NEW FEATURE: forgot password
+// NEW FEATURE: forgot password
 app.put('/forgotpass', async (req, res) => {
     try {
         const transporter = nodemailer.createTransport({

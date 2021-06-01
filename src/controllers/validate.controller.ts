@@ -29,7 +29,7 @@ export class Validate {
         //     return null;
         // }
         // Finding next eventRegId
-        const lastEventRegistration: IEventRegistration = await EventRegistration.findOne({}).sort('desc');
+        const lastEventRegistration: IEventRegistration = await EventRegistration.findOne({},{},{sort:{eventRegId:-1}});
         const one: any = 1;
         if (lastEventRegistration)
             newRegistration.eventRegId = lastEventRegistration.eventRegId + one;
