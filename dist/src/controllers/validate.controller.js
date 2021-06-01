@@ -37,7 +37,7 @@ class Validate {
             //     return null;
             // }
             // Finding next eventRegId
-            const lastEventRegistration = yield eventRegistration_1.EventRegistration.findOne({}).sort('desc');
+            const lastEventRegistration = yield eventRegistration_1.EventRegistration.findOne({}, {}, { sort: { eventRegId: -1 } });
             const one = 1;
             if (lastEventRegistration)
                 newRegistration.eventRegId = lastEventRegistration.eventRegId + one;

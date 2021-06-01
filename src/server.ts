@@ -18,10 +18,10 @@ import cookieParser from "cookie-parser";
 import { Validate } from "./controllers/validate.controller";
 import { Broadcast, IBroadcast } from "./models/broadcast";
 import nodemailer from 'nodemailer';
+import date from 'date-and-time';
 
 
 dotenv.config({ path: 'config/config.env' });
-
 
 
 const app = express();
@@ -48,6 +48,55 @@ router.use((req, res, next) => {
     next();
 });
 
+
+const checkTime = async (): Promise<any> => {
+    const now = new Date();
+    const currentTime = date.format(now, 'YYYY/MM/DD HH');
+    console.log(currentTime);
+
+    const events: IEvent[] = await Event.find({});
+    console.log(1);
+    events.forEach(async (event: IEvent) => {
+        const threeDaysBefore = date.addDays(event.eventStart,-3);
+        const eventDate = date.format(threeDaysBefore, 'YYYY/MM/DD HH');
+        console.log(eventDate);
+
+        if (eventDate === currentTime) {
+            console.log(1);
+            const eventRegs: IEventRegistration[] = await EventRegistration.find({ eventId: event.eventId });
+            eventRegs.forEach(async (eventReg: IEventRegistration) => {
+                const ship:IShip = await Ship.findOne({shipId:eventReg.shipId});
+                console.log(1);
+                // Transporter object using SMTP transport
+                const transporter = nodemailer.createTransport({
+                    host: "smtp.office365.com",
+                    port: 587,
+                    secure: false, // true for 465, false for other ports
+                    auth: {
+                        user: process.env.EMAIL_USER,
+                        pass: process.env.EMAIL_PSW,
+                    },
+                });
+
+                // sending mail with defined transport object
+                const info = await transporter.sendMail({
+                    from: '"Tregatta" <andr97e6@easv365.dk>', // sender address
+                    to: ship.emailUsername, //
+                    subject: "Event in 3 days!", // subject line
+                    text: "this is your reminder that in 3 days, "+event.name+" will start, which you are participating in. good luck loser!", // text body
+                    // html: "<p> some html </p>" // html in the body
+                });
+                console.log('DONE');
+            });
+        }
+    });
+
+
+
+}
+
+setInterval(checkTime, 3600000);
+
 app.use('/', router);
 // FINDALL EVENTS
 app.get('/events', async (req, res) => {
@@ -67,7 +116,7 @@ app.post('/events', async (req, res) => {
         }
         const event = new Event(req.body);
         const one: any = 1;
-        const lastEvent: IEvent = await Event.findOne({},{},{});
+        const lastEvent: IEvent = await Event.findOne({}, {}, {});
 
         if (lastEvent) {
             event.eventId = lastEvent.eventId + one;
@@ -209,7 +258,7 @@ app.get('/events/myEvents/findFromUsername', async (req, res) => {
         const events: any[] = [];
         const token: any = req.header('x-access-token');
         const user: any = AccessToken.getUser(token);
-        const ships: IShip[] = await Ship.find({ emailUsername: user.emailUsername }, { _id: 0, __v: 0 });
+        const ships: IShip[] = await Ship.find({ emailUsername: user.id }, { _id: 0, __v: 0 });
 
 
         if (ships.length > 0) {
@@ -250,7 +299,7 @@ app.post('/ships', async (req, res) => {
         const ship = new Ship(req.body);
 
         // Finding next shipId
-        const lastShip: IShip = await Ship.findOne({},{},{sort:{shipId:-1}});
+        const lastShip: IShip = await Ship.findOne({}, {}, { sort: { shipId: -1 } });
         if (lastShip) {
             ship.shipId = lastShip.shipId + 1;
         }
@@ -411,7 +460,7 @@ app.post('/racepoints/createRoute/:eventId', async (req, res) => {
 
         const racePoints = req.body;
         if (Array.isArray(racePoints)) {
-            const lastRacePoint: IRacePoint = await RacePoint.findOne({},{},{sort:{racepointId:-1}});
+            const lastRacePoint: IRacePoint = await RacePoint.findOne({}, {}, { sort: { racepointId: -1 } });
             let racepointId: number;
             const lastRaceP: any = lastRacePoint.racePointId;
             if (lastRacePoint)
@@ -490,8 +539,7 @@ app.put('/users/:userName', async (req, res) => {
 
         newUser.role = user.role;
 
-
-        await User.findOneAndUpdate({ emailUsername: newUser.emailUsername }, {newUser});
+        await User.findOneAndUpdate({ emailUsername: newUser.emailUsername }, newUser);
 
         // if (!user){
         //     return res.status(404).send({ message: "User not found with id " + req.params.emailUsername });
@@ -698,8 +746,6 @@ app.post('/eventRegistrations/signup', async (req, res) => {
 
                 const ship: IShip = await Ship.findOne({ shipId: req.body.shipId });
 
-                const testAccount = await nodemailer.createTestAccount();
-
                 // Transporter object using SMTP transport
                 const transporter = nodemailer.createTransport({
                     host: "smtp.office365.com",
@@ -778,7 +824,7 @@ app.post('/eventRegistrations/addParticipant', async (req, res) => {
 
             const newShip = new Ship({ "name": req.body.shipName, "emailUsername": req.body.emailUsername });
 
-            const lastShip: IShip = await Ship.findOne({},{},{sort:{shipId:-1}});
+            const lastShip: IShip = await Ship.findOne({}, {}, { sort: { shipId: -1 } });
             const one: any = 1;
             if (lastShip)
                 newShip.shipId = lastShip.shipId + one;
@@ -907,7 +953,7 @@ app.post('/locationRegistrations/', async (req, res) => {
             locationRegistration = locationReg;
         }
         const one: any = 1;
-        const lastRegistration: ILocationRegistration = await LocationRegistration.findOne({},{},{sort:{regId:-1}});
+        const lastRegistration: ILocationRegistration = await LocationRegistration.findOne({}, {}, { sort: { regId: -1 } });
         if (lastRegistration)
             locationRegistration.regId = lastRegistration.regId + one;
         else
@@ -1137,13 +1183,13 @@ app.put('/forgotpass', async (req, res) => {
         });
         // Updating the user
         const hashedPassword = await bcrypt.hashSync("1234");
-        await User.findOneAndUpdate({ emailUsername: req.body.emailUsername }, {password:hashedPassword});
+        await User.findOneAndUpdate({ emailUsername: req.body.emailUsername }, { password: hashedPassword });
 
 
         // if (!user){
         //     return res.status(404).send({ message: "User not found with id " + req.params.emailUsername });
         // }
-        res.status(200).send({message: 'Email sent'});
+        res.status(200).send({ message: 'Email sent' });
 
 
 

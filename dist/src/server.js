@@ -51,6 +51,7 @@ const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const validate_controller_1 = require("./controllers/validate.controller");
 const broadcast_1 = require("./models/broadcast");
 const nodemailer_1 = __importDefault(require("nodemailer"));
+const date_and_time_1 = __importDefault(require("date-and-time"));
 dotenv_1.default.config({ path: 'config/config.env' });
 const app = express_1.default();
 exports.app = app;
@@ -70,6 +71,46 @@ router.use((req, res, next) => {
     console.log("recieved a request now, ready for the next");
     next();
 });
+const checkTime = () => __awaiter(void 0, void 0, void 0, function* () {
+    const now = new Date();
+    const currentTime = date_and_time_1.default.format(now, 'YYYY/MM/DD HH');
+    console.log(currentTime);
+    const events = yield event_1.Event.find({});
+    console.log(1);
+    events.forEach((event) => __awaiter(void 0, void 0, void 0, function* () {
+        const threeDaysBefore = date_and_time_1.default.addDays(event.eventStart, -3);
+        const eventDate = date_and_time_1.default.format(threeDaysBefore, 'YYYY/MM/DD HH');
+        console.log(eventDate);
+        if (eventDate === currentTime) {
+            console.log(1);
+            const eventRegs = yield eventRegistration_1.EventRegistration.find({ eventId: event.eventId });
+            eventRegs.forEach((eventReg) => __awaiter(void 0, void 0, void 0, function* () {
+                const ship = yield ship_1.Ship.findOne({ shipId: eventReg.shipId });
+                console.log(1);
+                // Transporter object using SMTP transport
+                const transporter = nodemailer_1.default.createTransport({
+                    host: "smtp.office365.com",
+                    port: 587,
+                    secure: false,
+                    auth: {
+                        user: process.env.EMAIL_USER,
+                        pass: process.env.EMAIL_PSW,
+                    },
+                });
+                // sending mail with defined transport object
+                const info = yield transporter.sendMail({
+                    from: '"Tregatta" <andr97e6@easv365.dk>',
+                    to: ship.emailUsername,
+                    subject: "Event in 3 days!",
+                    text: "this is your reminder that in 3 days, " + event.name + " will start, which you are participating in. good luck loser!", // text body
+                    // html: "<p> some html </p>" // html in the body
+                });
+                console.log('DONE');
+            }));
+        }
+    }));
+});
+setInterval(checkTime, 60000);
 app.use('/', router);
 // FINDALL EVENTS
 app.get('/events', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -214,7 +255,7 @@ app.get('/events/myEvents/findFromUsername', (req, res) => __awaiter(void 0, voi
         const events = [];
         const token = req.header('x-access-token');
         const user = accessToken_controller_1.AccessToken.getUser(token);
-        const ships = yield ship_1.Ship.find({ emailUsername: user.emailUsername }, { _id: 0, __v: 0 });
+        const ships = yield ship_1.Ship.find({ emailUsername: user.id }, { _id: 0, __v: 0 });
         if (ships.length > 0) {
             // Finding all eventRegistrations with a ship that the user owns
             ships.forEach((ship) => __awaiter(void 0, void 0, void 0, function* () {
@@ -385,7 +426,7 @@ app.post('/racepoints/createRoute/:eventId', (req, res) => __awaiter(void 0, voi
         racePoint_1.RacePoint.deleteMany({ eventId: evId });
         const racePoints = req.body;
         if (Array.isArray(racePoints)) {
-            const lastRacePoint = yield racePoint_1.RacePoint.findOne({}).sort('desc');
+            const lastRacePoint = yield racePoint_1.RacePoint.findOne({}, {}, { sort: { racepointId: -1 } });
             let racepointId;
             const lastRaceP = lastRacePoint.racePointId;
             if (lastRacePoint)
@@ -447,7 +488,7 @@ app.put('/users/:userName', (req, res) => __awaiter(void 0, void 0, void 0, func
         const user = accessToken_controller_1.AccessToken.getUser(token);
         // newUser.password = hashedPassword;
         newUser.role = user.role;
-        yield user_1.User.findOneAndUpdate({ emailUsername: newUser.emailUsername }, { newUser });
+        yield user_1.User.findOneAndUpdate({ emailUsername: newUser.emailUsername }, newUser);
         // if (!user){
         //     return res.status(404).send({ message: "User not found with id " + req.params.emailUsername });
         // }
@@ -619,7 +660,6 @@ app.post('/eventRegistrations/signup', (req, res) => __awaiter(void 0, void 0, v
                     return res.status(500).send({ message: "SUCKS FOR YOU" });
                 }
                 const ship = yield ship_1.Ship.findOne({ shipId: req.body.shipId });
-                const testAccount = yield nodemailer_1.default.createTestAccount();
                 // Transporter object using SMTP transport
                 const transporter = nodemailer_1.default.createTransport({
                     host: "smtp.office365.com",
@@ -682,7 +722,7 @@ app.post('/eventRegistrations/addParticipant', (req, res) => __awaiter(void 0, v
         const ship = yield ship_1.Ship.findOne({ emailUsername: req.body.emailUsername, name: req.body.shipName }, { _id: 0, __v: 0 });
         if (!ship) {
             const newShip = new ship_1.Ship({ "name": req.body.shipName, "emailUsername": req.body.emailUsername });
-            const lastShip = yield ship_1.Ship.findOne({}).sort('-desc');
+            const lastShip = yield ship_1.Ship.findOne({}, {}, { sort: { shipId: -1 } });
             const one = 1;
             if (lastShip)
                 newShip.shipId = lastShip.shipId + one;
@@ -785,7 +825,7 @@ app.post('/locationRegistrations/', (req, res) => __awaiter(void 0, void 0, void
             locationRegistration = locationReg;
         }
         const one = 1;
-        const lastRegistration = yield locationRegistration_1.LocationRegistration.findOne({}).sort('-desc');
+        const lastRegistration = yield locationRegistration_1.LocationRegistration.findOne({}, {}, { sort: { regId: -1 } });
         if (lastRegistration)
             locationRegistration.regId = lastRegistration.regId + one;
         else
