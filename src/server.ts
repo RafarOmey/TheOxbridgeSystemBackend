@@ -58,7 +58,8 @@ const checkTime = async (): Promise<any> => {
     console.log(1);
     events.forEach(async (event: IEvent) => {
         const threeDaysBefore = date.addDays(event.eventStart,-3);
-        const eventDate = date.format(threeDaysBefore, 'YYYY/MM/DD HH');
+        const minusHours = date.addHours(threeDaysBefore,-2);
+        const eventDate = date.format(minusHours, 'YYYY/MM/DD HH');
         console.log(eventDate);
 
         if (eventDate === currentTime) {
@@ -102,7 +103,7 @@ app.use('/', router);
 app.get('/events', async (req, res) => {
     try {
         const events: IEvent[] = await Event.find({}, { _id: 0, __v: 0 });
-        res.status(201).json(events);
+        res.status(200).json(events);
     } catch (e) {
         res.status(400).send('BAD REQUEST')
     }
@@ -766,7 +767,7 @@ app.post('/eventRegistrations/signup', async (req, res) => {
                     // html: "<p> some html </p>" // html in the body
                 });
 
-                return res.status(201).json(regDone);
+                return res.status(201).send({message:'Registration successful'});
 
             }
         }
@@ -782,17 +783,13 @@ app.post('/eventRegistrations/signup', async (req, res) => {
 
 app.delete('/eventRegistrations/:eventRegId', async (req, res) => {
     // Checking if authorized
-    const verify: boolean = await Auth.Authorize(req, res, "all");
-    if (!verify) {
-        return res.status(400).send({ auth: false, message: 'Not Authorized' });
-    }
     try {
         const evRegId: any = req.params.eventRegId;
         // Finding and deleting the registration with the given regId
         const eventRegistration: IEventRegistration = await EventRegistration.findOneAndDelete({ eventRegId: evRegId });
         if (!eventRegistration)
             return res.status(404).send({ message: "EventRegistration not found with eventRegId " + req.params.eventRegId });
-        res.status(202).json(eventRegistration);
+        res.status(202).send({message: 'Registration deleted'});
 
 
 

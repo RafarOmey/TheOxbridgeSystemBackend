@@ -79,7 +79,8 @@ const checkTime = () => __awaiter(void 0, void 0, void 0, function* () {
     console.log(1);
     events.forEach((event) => __awaiter(void 0, void 0, void 0, function* () {
         const threeDaysBefore = date_and_time_1.default.addDays(event.eventStart, -3);
-        const eventDate = date_and_time_1.default.format(threeDaysBefore, 'YYYY/MM/DD HH');
+        const minusHours = date_and_time_1.default.addHours(threeDaysBefore, -2);
+        const eventDate = date_and_time_1.default.format(minusHours, 'YYYY/MM/DD HH');
         console.log(eventDate);
         if (eventDate === currentTime) {
             console.log(1);
@@ -110,13 +111,13 @@ const checkTime = () => __awaiter(void 0, void 0, void 0, function* () {
         }
     }));
 });
-setInterval(checkTime, 60000);
+setInterval(checkTime, 3600000);
 app.use('/', router);
 // FINDALL EVENTS
 app.get('/events', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const events = yield event_1.Event.find({}, { _id: 0, __v: 0 });
-        res.status(201).json(events);
+        res.status(200).json(events);
     }
     catch (e) {
         res.status(400).send('BAD REQUEST');
@@ -678,7 +679,7 @@ app.post('/eventRegistrations/signup', (req, res) => __awaiter(void 0, void 0, v
                     text: "your team - " + req.body.teamName + ", is now listed in the event " + event.name + ", with the boat " + ship.name + ".", // text body
                     // html: "<p> some html </p>" // html in the body
                 });
-                return res.status(201).json(regDone);
+                return res.status(201).send({ message: 'Registration successful' });
             }
         }
     }
@@ -688,17 +689,13 @@ app.post('/eventRegistrations/signup', (req, res) => __awaiter(void 0, void 0, v
 }));
 app.delete('/eventRegistrations/:eventRegId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // Checking if authorized
-    const verify = yield authentication_controller_1.Auth.Authorize(req, res, "all");
-    if (!verify) {
-        return res.status(400).send({ auth: false, message: 'Not Authorized' });
-    }
     try {
         const evRegId = req.params.eventRegId;
         // Finding and deleting the registration with the given regId
         const eventRegistration = yield eventRegistration_1.EventRegistration.findOneAndDelete({ eventRegId: evRegId });
         if (!eventRegistration)
             return res.status(404).send({ message: "EventRegistration not found with eventRegId " + req.params.eventRegId });
-        res.status(202).json(eventRegistration);
+        res.status(202).send({ message: 'Registration deleted' });
     }
     catch (e) {
         res.status(400).json('BAD REQUEST');
