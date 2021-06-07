@@ -85,7 +85,7 @@ const checkTime = async (): Promise<boolean> => {
                     from: '"Tregatta" <andr97e6@easv365.dk>', // sender address
                     to: ship.emailUsername, //
                     subject: "Event in 3 days!", // subject line
-                    text: "this is your reminder that in 3 days, "+event.name+" will start, which you are participating in. good luck loser!", // text body
+                    text: "this is your reminder that in 3 days, "+event.name+" will start, which you are participating in. good luck!", // text body
                     // html: "<p> some html </p>" // html in the body
                 });
                 console.log('DONE');
