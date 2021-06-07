@@ -39,6 +39,7 @@
     "date-and-time": "^1.0.1",
     "dotenv": "^8.6.0",
     "express-session": "^1.17.2",
+    "generate-password": "^1.6.0",
     "jsonwebtoken": "^8.5.1",
     "jwt-decode": "^3.1.2",
     "mongoose": "^5.12.9",

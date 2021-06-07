@@ -31,7 +31,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.app = void 0;
+exports.checkTime = exports.app = void 0;
 const mongoose_1 = require("mongoose");
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
@@ -52,6 +52,7 @@ const validate_controller_1 = require("./controllers/validate.controller");
 const broadcast_1 = require("./models/broadcast");
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const date_and_time_1 = __importDefault(require("date-and-time"));
+const generate_password_1 = __importDefault(require("generate-password"));
 dotenv_1.default.config({ path: 'config/config.env' });
 const app = express_1.default();
 exports.app = app;
@@ -76,18 +77,15 @@ const checkTime = () => __awaiter(void 0, void 0, void 0, function* () {
     const currentTime = date_and_time_1.default.format(now, 'YYYY/MM/DD HH');
     console.log(currentTime);
     const events = yield event_1.Event.find({});
-    console.log(1);
     events.forEach((event) => __awaiter(void 0, void 0, void 0, function* () {
         const threeDaysBefore = date_and_time_1.default.addDays(event.eventStart, -3);
         const minusHours = date_and_time_1.default.addHours(threeDaysBefore, -2);
         const eventDate = date_and_time_1.default.format(minusHours, 'YYYY/MM/DD HH');
         console.log(eventDate);
         if (eventDate === currentTime) {
-            console.log(1);
             const eventRegs = yield eventRegistration_1.EventRegistration.find({ eventId: event.eventId });
             eventRegs.forEach((eventReg) => __awaiter(void 0, void 0, void 0, function* () {
                 const ship = yield ship_1.Ship.findOne({ shipId: eventReg.shipId });
-                console.log(1);
                 // Transporter object using SMTP transport
                 const transporter = nodemailer_1.default.createTransport({
                     host: "smtp.office365.com",
@@ -107,10 +105,13 @@ const checkTime = () => __awaiter(void 0, void 0, void 0, function* () {
                     // html: "<p> some html </p>" // html in the body
                 });
                 console.log('DONE');
+                return true;
             }));
         }
     }));
+    return false;
 });
+exports.checkTime = checkTime;
 setInterval(checkTime, 3600000);
 app.use('/', router);
 // FINDALL EVENTS
@@ -984,6 +985,10 @@ app.post('/broadcastget/', (req, res) => __awaiter(void 0, void 0, void 0, funct
 // NEW FEATURE: forgot password
 app.put('/forgotpass', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const password = generate_password_1.default.generate({
+            length: 8,
+            numbers: true
+        });
         const transporter = nodemailer_1.default.createTransport({
             host: "smtp.office365.com",
             port: 587,
@@ -998,11 +1003,12 @@ app.put('/forgotpass', (req, res) => __awaiter(void 0, void 0, void 0, function*
             from: '"Tregatta" <andr97e6@easv365.dk>',
             to: req.body.emailUsername,
             subject: "Forgotten password",
-            text: "Seems like you forgot your password! here's a new one: 1234", // text body
+            text: "Seems like you forgot your password! here's a new one: " + password + "", // text body
             // html: "<p> some html </p>" // html in the body
         });
         // Updating the user
-        const hashedPassword = yield bcrypt_nodejs_1.default.hashSync("1234");
+        console.log(password);
+        const hashedPassword = yield bcrypt_nodejs_1.default.hashSync(password);
         yield user_1.User.findOneAndUpdate({ emailUsername: req.body.emailUsername }, { password: hashedPassword });
         // if (!user){
         //     return res.status(404).send({ message: "User not found with id " + req.params.emailUsername });

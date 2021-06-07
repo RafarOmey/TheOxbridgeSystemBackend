@@ -19,6 +19,7 @@ import { Validate } from "./controllers/validate.controller";
 import { Broadcast, IBroadcast } from "./models/broadcast";
 import nodemailer from 'nodemailer';
 import date from 'date-and-time';
+import generator from 'generate-password'
 
 
 dotenv.config({ path: 'config/config.env' });
@@ -49,13 +50,13 @@ router.use((req, res, next) => {
 });
 
 
-const checkTime = async (): Promise<any> => {
+const checkTime = async (): Promise<boolean> => {
     const now = new Date();
     const currentTime = date.format(now, 'YYYY/MM/DD HH');
     console.log(currentTime);
 
     const events: IEvent[] = await Event.find({});
-    console.log(1);
+
     events.forEach(async (event: IEvent) => {
         const threeDaysBefore = date.addDays(event.eventStart,-3);
         const minusHours = date.addHours(threeDaysBefore,-2);
@@ -63,11 +64,11 @@ const checkTime = async (): Promise<any> => {
         console.log(eventDate);
 
         if (eventDate === currentTime) {
-            console.log(1);
+
             const eventRegs: IEventRegistration[] = await EventRegistration.find({ eventId: event.eventId });
             eventRegs.forEach(async (eventReg: IEventRegistration) => {
                 const ship:IShip = await Ship.findOne({shipId:eventReg.shipId});
-                console.log(1);
+
                 // Transporter object using SMTP transport
                 const transporter = nodemailer.createTransport({
                     host: "smtp.office365.com",
@@ -88,9 +89,12 @@ const checkTime = async (): Promise<any> => {
                     // html: "<p> some html </p>" // html in the body
                 });
                 console.log('DONE');
+                return true;
             });
         }
+
     });
+    return false;
 
 
 
@@ -1161,6 +1165,10 @@ app.post('/broadcastget/', async (req, res) => {
 // NEW FEATURE: forgot password
 app.put('/forgotpass', async (req, res) => {
     try {
+        const password = generator.generate({
+            length: 8,
+            numbers: true
+        });
         const transporter = nodemailer.createTransport({
             host: "smtp.office365.com",
             port: 587,
@@ -1175,11 +1183,11 @@ app.put('/forgotpass', async (req, res) => {
             from: '"Tregatta" <andr97e6@easv365.dk>', // sender address
             to: req.body.emailUsername, //
             subject: "Forgotten password", // subject line
-            text: "Seems like you forgot your password! here's a new one: 1234", // text body
+            text: "Seems like you forgot your password! here's a new one: "+password+"", // text body
             // html: "<p> some html </p>" // html in the body
         });
         // Updating the user
-        const hashedPassword = await bcrypt.hashSync("1234");
+        const hashedPassword = await bcrypt.hashSync(password);
         await User.findOneAndUpdate({ emailUsername: req.body.emailUsername }, { password: hashedPassword });
 
 
@@ -1199,4 +1207,4 @@ app.get('*', (req, res) => {
     return res.status(400).send('Page Not Found');
 });
 
-export { app }
+export { app, checkTime }
