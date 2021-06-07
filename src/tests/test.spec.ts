@@ -13,7 +13,7 @@ describe("GET single event", () => {
     });
 });
 
-//REMEMBER TO INSERT EMAIL
+// REMEMBER TO INSERT EMAIL
 describe("post eventRegistration", () => {
     it("POST should insert an eventregistration", async () => {
         const result = await request(api).post("/eventRegistrations/signup").send({ "shipId": "3", "teamName": "CoolTeam", "eventCode": "1234", "emailUsername": "*INSERT EMAIL HERE*" });
@@ -35,7 +35,7 @@ describe("delete eventRegistration", () => {
     });
 });
 
-//REMEMBER TO INSERT EMAIL
+// REMEMBER TO INSERT EMAIL
 describe("forgot password", () => {
     it("PUT should give the user a new password", async () => {
         const result = await request(api).put("/forgotpass").send({ "emailUsername": "*INSERT EMAIL HERE*" });

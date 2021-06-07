@@ -532,24 +532,18 @@ app.get('/users/:userName', async (req, res) => {
 app.put('/users/:userName', async (req, res) => {
     try {
         // Updating the user
-        // const hashedPassword = await bcrypt.hashSync(req.body.password);
-
-        const newUser = new User(req.body);
+        const hashedPassword = await bcrypt.hashSync(req.body.password);
 
         const token: any = req.header('x-access-token');
 
         const user: any = AccessToken.getUser(token);
 
-        // newUser.password = hashedPassword;
-
-        newUser.role = user.role;
-
-        await User.findOneAndUpdate({ emailUsername: newUser.emailUsername }, newUser);
+        await User.findOneAndUpdate({ emailUsername: req.params.userName }, { password: hashedPassword, firstname: req.body.firstname, lastname: req.body.lastname, emailUsername: req.body.emailUsername });
 
         // if (!user){
         //     return res.status(404).send({ message: "User not found with id " + req.params.emailUsername });
         // }
-        res.status(202).json(newUser);
+        res.status(202).send({message: 'success!'});
 
     } catch (e) {
         res.status(400).json('BAD REQUEST')

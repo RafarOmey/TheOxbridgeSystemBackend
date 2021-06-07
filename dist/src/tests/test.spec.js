@@ -22,6 +22,7 @@ describe("GET single event", () => {
         expect(result.status).toEqual(200);
     }));
 });
+// REMEMBER TO INSERT EMAIL
 describe("post eventRegistration", () => {
     it("POST should insert an eventregistration", () => __awaiter(void 0, void 0, void 0, function* () {
         const result = yield supertest_1.default(api).post("/eventRegistrations/signup").send({ "shipId": "3", "teamName": "CoolTeam", "eventCode": "1234", "emailUsername": "*INSERT EMAIL HERE*" });
@@ -41,6 +42,7 @@ describe("delete eventRegistration", () => {
         expect(result.status).toEqual(202);
     }));
 });
+// REMEMBER TO INSERT EMAIL
 describe("forgot password", () => {
     it("PUT should give the user a new password", () => __awaiter(void 0, void 0, void 0, function* () {
         const result = yield supertest_1.default(api).put("/forgotpass").send({ "emailUsername": "*INSERT EMAIL HERE*" });

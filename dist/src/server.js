@@ -101,7 +101,7 @@ const checkTime = () => __awaiter(void 0, void 0, void 0, function* () {
                     from: '"Tregatta" <andr97e6@easv365.dk>',
                     to: ship.emailUsername,
                     subject: "Event in 3 days!",
-                    text: "this is your reminder that in 3 days, " + event.name + " will start, which you are participating in. good luck loser!", // text body
+                    text: "this is your reminder that in 3 days, " + event.name + " will start, which you are participating in. good luck!", // text body
                     // html: "<p> some html </p>" // html in the body
                 });
                 console.log('DONE');
@@ -484,17 +484,14 @@ app.get('/users/:userName', (req, res) => __awaiter(void 0, void 0, void 0, func
 app.put('/users/:userName', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Updating the user
-        // const hashedPassword = await bcrypt.hashSync(req.body.password);
-        const newUser = new user_1.User(req.body);
+        const hashedPassword = yield bcrypt_nodejs_1.default.hashSync(req.body.password);
         const token = req.header('x-access-token');
         const user = accessToken_controller_1.AccessToken.getUser(token);
-        // newUser.password = hashedPassword;
-        newUser.role = user.role;
-        yield user_1.User.findOneAndUpdate({ emailUsername: newUser.emailUsername }, newUser);
+        yield user_1.User.findOneAndUpdate({ emailUsername: req.params.userName }, { password: hashedPassword, firstname: req.body.firstname, lastname: req.body.lastname, emailUsername: req.body.emailUsername });
         // if (!user){
         //     return res.status(404).send({ message: "User not found with id " + req.params.emailUsername });
         // }
-        res.status(202).json(newUser);
+        res.status(202).send({ message: 'success!' });
     }
     catch (e) {
         res.status(400).json('BAD REQUEST');
@@ -1007,7 +1004,6 @@ app.put('/forgotpass', (req, res) => __awaiter(void 0, void 0, void 0, function*
             // html: "<p> some html </p>" // html in the body
         });
         // Updating the user
-        console.log(password);
         const hashedPassword = yield bcrypt_nodejs_1.default.hashSync(password);
         yield user_1.User.findOneAndUpdate({ emailUsername: req.body.emailUsername }, { password: hashedPassword });
         // if (!user){
