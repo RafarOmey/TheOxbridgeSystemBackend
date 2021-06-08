@@ -19,7 +19,11 @@ import { Validate } from "./controllers/validate.controller";
 import { Broadcast, IBroadcast } from "./models/broadcast";
 import nodemailer from 'nodemailer';
 import date from 'date-and-time';
-import generator from 'generate-password'
+import generator from 'generate-password';
+import multer from 'multer';
+import { IImage, Image } from './models/image';
+import fs from 'fs';
+import fsExtra from 'fs-extra';
 
 
 dotenv.config({ path: 'config/config.env' });
@@ -49,6 +53,14 @@ router.use((req, res, next) => {
     next();
 });
 
+const storage = multer.diskStorage({
+    destination: './uploads',
+    filename: (req, file, cb) => {
+        cb(null, file.fieldname + '-' + Date.now())
+    }
+});
+
+const upload = multer({ storage });
 
 const checkTime = async (): Promise<boolean> => {
     const now = new Date();
@@ -58,8 +70,8 @@ const checkTime = async (): Promise<boolean> => {
     const events: IEvent[] = await Event.find({});
 
     events.forEach(async (event: IEvent) => {
-        const threeDaysBefore = date.addDays(event.eventStart,-3);
-        const minusHours = date.addHours(threeDaysBefore,-2);
+        const threeDaysBefore = date.addDays(event.eventStart, -3);
+        const minusHours = date.addHours(threeDaysBefore, -2);
         const eventDate = date.format(minusHours, 'YYYY/MM/DD HH');
         console.log(eventDate);
 
@@ -67,7 +79,7 @@ const checkTime = async (): Promise<boolean> => {
 
             const eventRegs: IEventRegistration[] = await EventRegistration.find({ eventId: event.eventId });
             eventRegs.forEach(async (eventReg: IEventRegistration) => {
-                const ship:IShip = await Ship.findOne({shipId:eventReg.shipId});
+                const ship: IShip = await Ship.findOne({ shipId: eventReg.shipId });
 
                 // Transporter object using SMTP transport
                 const transporter = nodemailer.createTransport({
@@ -85,7 +97,7 @@ const checkTime = async (): Promise<boolean> => {
                     from: '"Tregatta" <andr97e6@easv365.dk>', // sender address
                     to: ship.emailUsername, //
                     subject: "Event in 3 days!", // subject line
-                    text: "this is your reminder that in 3 days, "+event.name+" will start, which you are participating in. good luck!", // text body
+                    text: "this is your reminder that in 3 days, " + event.name + " will start, which you are participating in. good luck!", // text body
                     // html: "<p> some html </p>" // html in the body
                 });
                 console.log('DONE');
@@ -543,7 +555,7 @@ app.put('/users/:userName', async (req, res) => {
         // if (!user){
         //     return res.status(404).send({ message: "User not found with id " + req.params.emailUsername });
         // }
-        res.status(202).send({message: 'success!'});
+        res.status(202).send({ message: 'success!' });
 
     } catch (e) {
         res.status(400).json('BAD REQUEST')
@@ -765,7 +777,7 @@ app.post('/eventRegistrations/signup', async (req, res) => {
                     // html: "<p> some html </p>" // html in the body
                 });
 
-                return res.status(201).send({message:'Registration successful'});
+                return res.status(201).send({ message: 'Registration successful' });
 
             }
         }
@@ -787,7 +799,7 @@ app.delete('/eventRegistrations/:eventRegId', async (req, res) => {
         const eventRegistration: IEventRegistration = await EventRegistration.findOneAndDelete({ eventRegId: evRegId });
         if (!eventRegistration)
             return res.status(404).send({ message: "EventRegistration not found with eventRegId " + req.params.eventRegId });
-        res.status(202).send({message: 'Registration deleted'});
+        res.status(202).send({ message: 'Registration deleted' });
 
 
 
@@ -1177,7 +1189,7 @@ app.put('/forgotpass', async (req, res) => {
             from: '"Tregatta" <andr97e6@easv365.dk>', // sender address
             to: req.body.emailUsername, //
             subject: "Forgotten password", // subject line
-            text: "Seems like you forgot your password! here's a new one: "+password+"", // text body
+            text: "Seems like you forgot your password! here's a new one: " + password + "", // text body
             // html: "<p> some html </p>" // html in the body
         });
         // Updating the user
@@ -1196,6 +1208,42 @@ app.put('/forgotpass', async (req, res) => {
         res.status(400).json('BAD REQUEST')
     }
 });
+
+app.post('/image', upload.single('image'), async (req, res, next) => {
+    try {
+        const obj: IImage = new Image();
+        const image: IImage = await Image.findOne({ name: req.body.teamName });
+        if (image) {
+            res.status(400).send({ message: 'team already has an image' })
+        }
+        else {
+            obj.name = req.body.teamName;
+            obj.img.data = await fs.readFileSync('C:\\Users\\Andreas Hansen\\OneDrive\\Skrivebord\\WEBTESTING\\TheOxbridgeSystemBackend\\uploads/' + req.file.filename);
+            obj.img.contentType = 'image/png';
+            await obj.save();
+            fsExtra.emptyDirSync('C:\\Users\\Andreas Hansen\\OneDrive\\Skrivebord\\WEBTESTING\\TheOxbridgeSystemBackend\\uploads/')
+            res.status(201).send({ message: 'success!' });
+        }
+
+    } catch (e) {
+        res.status(400).json('BAD REQUEST')
+    }
+
+
+});
+
+app.get('/image', async (req, res) => {
+    try {
+
+        const items: IImage[] = await Image.find({});
+
+        res.status(200).send({ items });
+    } catch (e) {
+        res.status(400).json('BAD REQUEST')
+    }
+});
+
+
 
 app.get('*', (req, res) => {
     return res.status(400).send('Page Not Found');

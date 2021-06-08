@@ -53,6 +53,10 @@ const broadcast_1 = require("./models/broadcast");
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const date_and_time_1 = __importDefault(require("date-and-time"));
 const generate_password_1 = __importDefault(require("generate-password"));
+const multer_1 = __importDefault(require("multer"));
+const image_1 = require("./models/image");
+const fs_1 = __importDefault(require("fs"));
+const fs_extra_1 = __importDefault(require("fs-extra"));
 dotenv_1.default.config({ path: 'config/config.env' });
 const app = express_1.default();
 exports.app = app;
@@ -72,6 +76,13 @@ router.use((req, res, next) => {
     console.log("recieved a request now, ready for the next");
     next();
 });
+const storage = multer_1.default.diskStorage({
+    destination: './uploads',
+    filename: (req, file, cb) => {
+        cb(null, file.fieldname + '-' + Date.now());
+    }
+});
+const upload = multer_1.default({ storage });
 const checkTime = () => __awaiter(void 0, void 0, void 0, function* () {
     const now = new Date();
     const currentTime = date_and_time_1.default.format(now, 'YYYY/MM/DD HH');
@@ -1010,6 +1021,35 @@ app.put('/forgotpass', (req, res) => __awaiter(void 0, void 0, void 0, function*
         //     return res.status(404).send({ message: "User not found with id " + req.params.emailUsername });
         // }
         res.status(200).send({ message: 'Email sent' });
+    }
+    catch (e) {
+        res.status(400).json('BAD REQUEST');
+    }
+}));
+app.post('/image', upload.single('image'), (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const obj = new image_1.Image();
+        const image = yield image_1.Image.findOne({ name: req.body.teamName });
+        if (image) {
+            res.status(400).send({ message: 'team already has an image' });
+        }
+        else {
+            obj.name = req.body.teamName;
+            obj.img.data = yield fs_1.default.readFileSync('C:\\Users\\Andreas Hansen\\OneDrive\\Skrivebord\\WEBTESTING\\TheOxbridgeSystemBackend\\uploads/' + req.file.filename);
+            obj.img.contentType = 'image/png';
+            yield obj.save();
+            fs_extra_1.default.emptyDirSync('C:\\Users\\Andreas Hansen\\OneDrive\\Skrivebord\\WEBTESTING\\TheOxbridgeSystemBackend\\uploads/');
+            res.status(201).send({ message: 'success!' });
+        }
+    }
+    catch (e) {
+        res.status(400).json('BAD REQUEST');
+    }
+}));
+app.get('/image', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const items = yield image_1.Image.find({});
+        res.status(200).send({ items });
     }
     catch (e) {
         res.status(400).json('BAD REQUEST');
