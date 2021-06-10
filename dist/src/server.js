@@ -1048,8 +1048,8 @@ app.post('/image', upload.single('image'), (req, res, next) => __awaiter(void 0,
 }));
 app.get('/image', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const items = yield image_1.Image.find({});
-        res.status(200).send({ items });
+        const images = yield image_1.Image.find({});
+        res.status(200).json({ images });
     }
     catch (e) {
         res.status(400).json('BAD REQUEST');

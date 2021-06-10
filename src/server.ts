@@ -1235,9 +1235,9 @@ app.post('/image', upload.single('image'), async (req, res, next) => {
 app.get('/image', async (req, res) => {
     try {
 
-        const items: IImage[] = await Image.find({});
+        const images: IImage[] = await Image.find({});
 
-        res.status(200).send({ items });
+        res.status(200).json({images});
     } catch (e) {
         res.status(400).json('BAD REQUEST')
     }
