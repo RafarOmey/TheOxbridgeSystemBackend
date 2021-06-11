@@ -53,6 +53,7 @@ router.use((req, res, next) => {
     next();
 });
 
+
 const storage = multer.diskStorage({
     destination: './uploads',
     filename: (req, file, cb) => {
@@ -62,6 +63,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+// Checks the time to see if it is 3 days before an event
 const checkTime = async (): Promise<boolean> => {
     const now = new Date();
     const currentTime = date.format(now, 'YYYY/MM/DD HH');
@@ -69,14 +71,17 @@ const checkTime = async (): Promise<boolean> => {
 
     const events: IEvent[] = await Event.find({});
 
+    // Checks through all events
     events.forEach(async (event: IEvent) => {
         const threeDaysBefore = date.addDays(event.eventStart, -3);
         const minusHours = date.addHours(threeDaysBefore, -2);
         const eventDate = date.format(minusHours, 'YYYY/MM/DD HH');
         console.log(eventDate);
 
+        // checks if eventdate -3days is equals to currenttime
         if (eventDate === currentTime) {
 
+            // Finds all participants in an event and sends an email to them
             const eventRegs: IEventRegistration[] = await EventRegistration.find({ eventId: event.eventId });
             eventRegs.forEach(async (eventReg: IEventRegistration) => {
                 const ship: IShip = await Ship.findOne({ shipId: eventReg.shipId });
@@ -112,10 +117,11 @@ const checkTime = async (): Promise<boolean> => {
 
 }
 
+// Calls the checkTime function every hour
 setInterval(checkTime, 3600000);
 
 app.use('/', router);
-// FINDALL EVENTS
+// Retrieve all events
 app.get('/events', async (req, res) => {
     try {
         const events: IEvent[] = await Event.find({}, { _id: 0, __v: 0 });
@@ -124,7 +130,7 @@ app.get('/events', async (req, res) => {
         res.status(400).send('BAD REQUEST')
     }
 });
-// POST EVENT
+// Create an new event
 app.post('/events', async (req, res) => {
     try {
         const verify: boolean = await Auth.Authorize(req, res, "admin");
@@ -153,7 +159,7 @@ app.post('/events', async (req, res) => {
         res.status(400).send('BAD REQUEST')
     }
 });
-// FIND SINGLE EVENT
+// Retrieve a single Event with eventId
 app.get('/events/:eventId', async (req, res) => {
     try {
         const evId: any = req.params.eventId;
@@ -170,7 +176,7 @@ app.get('/events/:eventId', async (req, res) => {
     }
 });
 
-// UPDATE EVENT
+// Update an Event with given eventId
 app.put('/events/:eventId', async (req, res) => {
     try {
         const verify: boolean = await Auth.Authorize(req, res, "admin");
@@ -190,6 +196,7 @@ app.put('/events/:eventId', async (req, res) => {
 
 });
 
+// Delete an Event with given eventId
 app.delete('/events/:eventId', async (req, res) => {
     try {
         // Checking if authorized
@@ -234,6 +241,7 @@ app.put('/events/startEvent/:eventId', async (req, res) => {
     }
 });
 
+// Updating event property "isLive" to false
 app.get('/events/stopEvent/:eventId', async (req, res) => {
     try {
         // Checking if authorized
@@ -249,6 +257,7 @@ app.get('/events/stopEvent/:eventId', async (req, res) => {
     }
 });
 
+// Checks if event with given eventId has a route
 app.get('/events/hasRoute/:eventId', async (req, res) => {
     try {
         const evId: any = req.params.eventId;
@@ -263,7 +272,7 @@ app.get('/events/hasRoute/:eventId', async (req, res) => {
     }
 });
 
-
+// Retrieve all events with participant corresponding to primarykey of user, supplied from the token
 app.get('/events/myEvents/findFromUsername', async (req, res) => {
     try {
         // Checking if authorized
@@ -656,7 +665,7 @@ app.post('/users/login', async (req, res) => {
     }
 });
 
-
+// Create a new EventRegistration
 app.post('/eventRegistrations/', async (req, res) => {
     try {
         // Checking if authorized
@@ -728,9 +737,8 @@ app.get('/eventRegistrations/findEventRegFromUsername/:eventId', async (req, res
     }
 });
 
+// Create an EventRegistration
 app.post('/eventRegistrations/signup', async (req, res) => {
-    // Checking if authorized
-
     try {
 
         // Checks that the eventCode is correct
@@ -776,21 +784,15 @@ app.post('/eventRegistrations/signup', async (req, res) => {
                     text: "your team - " + req.body.teamName + ", is now listed in the event " + event.name + ", with the boat " + ship.name + ".", // text body
                     // html: "<p> some html </p>" // html in the body
                 });
-
                 return res.status(201).send({ message: 'Registration successful' });
-
             }
         }
-
-
-
-
-
     } catch (e) {
         res.status(400).json('BAD REQUEST')
     }
 });
 
+// Delete an EventRegistration with given eventRegId
 app.delete('/eventRegistrations/:eventRegId', async (req, res) => {
     // Checking if authorized
     try {
@@ -808,6 +810,7 @@ app.delete('/eventRegistrations/:eventRegId', async (req, res) => {
     }
 });
 
+// Creates an EventRegistration
 app.post('/eventRegistrations/addParticipant', async (req, res) => {
     // Checking if authorized
     const verify: boolean = await Auth.Authorize(req, res, "admin");
@@ -857,11 +860,9 @@ app.post('/eventRegistrations/addParticipant', async (req, res) => {
     }
 });
 
+// Retrieve all EventRegistrations with the given eventId
 app.get('/eventRegistrations/getParticipants/:eventId', async (req, res) => {
-
-
     try {
-
         const participants: any[] = [];
         const evId: any = req.params.eventId;
         const eventRegs: IEventRegistration[] = await EventRegistration.find({ eventId: evId }, { _id: 0, __v: 0 });
@@ -910,6 +911,7 @@ app.get('/eventRegistrations/getParticipants/:eventId', async (req, res) => {
     }
 });
 
+// Update EventRegistration 
 app.put('/eventRegistrations/updateParticipant/:eventRegId', async (req, res) => {
     // Checking if authorized
     const verify: boolean = await Auth.Authorize(req, res, "admin");
@@ -943,12 +945,12 @@ app.put('/eventRegistrations/updateParticipant/:eventRegId', async (req, res) =>
     }
 });
 
+// Create a new LocationRegistration
 app.post('/locationRegistrations/', async (req, res) => {
-    // Checking if authorized
-
     try {
         // Creating the LocationRegistration
         let locationRegistration: ILocationRegistration = req.body;
+        // Checking if valid
         const val: boolean = await Validate.validateLocationForeignKeys(locationRegistration, res);
         if (!val) {
             return res.status(400).send({ message: 'Could not create' });
@@ -976,6 +978,7 @@ app.post('/locationRegistrations/', async (req, res) => {
     }
 });
 
+// Retrieve latest LocationRegistrations from specified event
 app.get('/locationRegistrations/getLive/:eventId', async (req, res) => {
 
     try {
@@ -1016,6 +1019,7 @@ app.get('/locationRegistrations/getLive/:eventId', async (req, res) => {
     }
 });
 
+// Retrieve all LocationRegistrations from specified event
 app.get('/locationRegistrations/getReplay/:eventId', async (req, res) => {
 
     try {
@@ -1051,7 +1055,7 @@ app.get('/locationRegistrations/getReplay/:eventId', async (req, res) => {
     }
 });
 
-
+// Retrieve scoreboard from specific event
 app.get('/locationRegistrations/getScoreboard/:eventId', async (req, res) => {
     try {
 
@@ -1094,6 +1098,7 @@ app.get('/locationRegistrations/getScoreboard/:eventId', async (req, res) => {
     }
 });
 
+// Delete all locationRegistrations with a given eventRegId
 app.delete('/locationRegistrations/deleteFromEventRegId/:eventId', async (req, res) => {
     // Checking if authorized
     const verify: boolean = await Auth.Authorize(req, res, "user");
@@ -1112,26 +1117,31 @@ app.delete('/locationRegistrations/deleteFromEventRegId/:eventId', async (req, r
     }
 });
 
+// NEW FEATURE: Post broadcast messages
 app.post('/broadcast', async (req, res) => {
     try {
+        // Finds the event with the corresponding eventID
         const evId: any = req.body.eventId;
         const eventRegs: IEventRegistration[] = await EventRegistration.find({ eventId: evId }, { _id: 0, __v: 0 });
+        // Checks if there are participants
         if (!eventRegs || eventRegs.length === 0)
             return res.status(404).send({ message: "No participants found" });
 
         if (eventRegs.length !== 0) {
+            // Goes through each participant
             eventRegs.forEach(async (eventRegistration: IEventRegistration) => {
 
-
+                // Checks if the participant's ship exists
                 const ship: IShip = await Ship.findOne({ shipId: eventRegistration.shipId }, { _id: 0, __v: 0 });
                 if (!ship)
                     return res.status(404).send({ message: "Ship not found" });
 
                 else if (ship) {
+                    // checks if the ship's user exists
                     const user: IUser = await User.findOne({ emailUsername: ship.emailUsername }, { _id: 0, __v: 0 });
                     if (!user)
                         return res.status(404).send({ message: "User not found" });
-
+                    // posts the broadcast with the User of the ship connected to the eventregistration
                     if (user) {
                         const participant = new Broadcast({
                             "eventId": req.body.eventId,
@@ -1155,9 +1165,10 @@ app.post('/broadcast', async (req, res) => {
 
 
 });
-// NEW FEATURE: Broadcast message
+// NEW FEATURE: Get broadcast message
 app.post('/broadcastget/', async (req, res) => {
     try {
+        // Gets all the broadcasts related to the user with the use of req.body.Username
         const username: any = req.body.Username;
         const broadcasts: IBroadcast[] = await Broadcast.find({ emailUsername: username }, { _id: 0, __v: 0 });
         await Broadcast.deleteMany({ emailUsername: username });
@@ -1171,10 +1182,12 @@ app.post('/broadcastget/', async (req, res) => {
 // NEW FEATURE: forgot password
 app.put('/forgotpass', async (req, res) => {
     try {
+        // Auto-generates new password
         const password = generator.generate({
             length: 8,
             numbers: true
         });
+        // Creates Transport object for sending mail
         const transporter = nodemailer.createTransport({
             host: "smtp.office365.com",
             port: 587,
@@ -1209,13 +1222,16 @@ app.put('/forgotpass', async (req, res) => {
     }
 });
 
+//NEW FEATURE: Posts an image to the database
 app.post('/image', upload.single('image'), async (req, res, next) => {
     try {
         const obj: IImage = new Image();
         const image: IImage = await Image.findOne({ name: req.body.teamName });
+        // Checks if the team already has an image
         if (image) {
             res.status(400).send({ message: 'team already has an image' })
         }
+        //Reads the image and converts it into a byte[] and saves it in the database, then empties the uploads directory
         else {
             obj.name = req.body.teamName;
             obj.img.data = await fs.readFileSync('C:\\Users\\Andreas Hansen\\OneDrive\\Skrivebord\\WEBTESTING\\TheOxbridgeSystemBackend\\uploads/' + req.file.filename);

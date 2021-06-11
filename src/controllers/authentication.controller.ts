@@ -5,6 +5,7 @@ import { AccessToken } from './accessToken.controller'
 dotenv.config({ path: 'config/config.env' }); // NEW
 
 export class Auth {
+    // Authorizes if the token and the user's role are valid
     static async Authorize(req: Request, res: Response, role: string):Promise<boolean> {
         // Checks if a token is provided
         const token = req.header('x-access-token');
@@ -29,13 +30,6 @@ export class Auth {
         else
             return true;
     }
-
-    static async getUser(req:Request,res:Response){
-        const token = req.header('x-access-token');
-        const user:any = AccessToken.getUser(token);
-        return user;
-    }
-
 }
 
 

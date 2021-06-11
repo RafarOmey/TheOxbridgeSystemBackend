@@ -9,6 +9,7 @@ import { RacePoint, IRacePoint } from '../models/racePoint'
 
 
 export class Validate {
+    // Validates if the ship and the event exists
     static async validateEventForeignKeys(registration: IEventRegistration, res: express.Response): Promise<boolean> {
         // Checking if ship exists
         const ship: IShip = await Ship.findOne({ shipId: registration.shipId })
@@ -22,6 +23,7 @@ export class Validate {
         }
     }
 
+    // Creates a registration
     static async createRegistration(newRegistration: IEventRegistration, res: express.Response): Promise<IEventRegistration> {
 
         // const val: boolean = await this.validateEventForeignKeys(newRegistration, res);
@@ -82,6 +84,7 @@ export class Validate {
         return d;
     }
 
+    // Validates if the eventreg exists
     static async validateLocationForeignKeys(registration: ILocationRegistration, res: express.Response): Promise<boolean> {
 
         // Checking if eventReg exists

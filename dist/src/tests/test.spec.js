@@ -25,7 +25,7 @@ describe("GET single event", () => {
 // REMEMBER TO INSERT EMAIL
 describe("post eventRegistration", () => {
     it("POST should insert an eventregistration", () => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield supertest_1.default(api).post("/eventRegistrations/signup").send({ "shipId": "3", "teamName": "CoolTeam", "eventCode": "1234", "emailUsername": "*INSERT EMAIL HERE*" });
+        const result = yield supertest_1.default(api).post("/eventRegistrations/signup").send({ "shipId": "4", "teamName": "CoolTeam", "eventCode": "1234", "emailUsername": "*INSERT EMAIL HERE*" });
         expect(result.body).toEqual({ message: 'Registration successful' });
         expect(result.status).toEqual(201);
     }));
