@@ -1248,6 +1248,7 @@ app.post('/image', upload.single('image'), async (req, res, next) => {
 
 });
 
+// NEW FEATURE: Gets the all images
 app.get('/image', async (req, res) => {
     try {
 
