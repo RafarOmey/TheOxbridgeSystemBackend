@@ -33,6 +33,7 @@ const dotenv = __importStar(require("dotenv"));
 const accessToken_controller_1 = require("./accessToken.controller");
 dotenv.config({ path: 'config/config.env' }); // NEW
 class Auth {
+    // Authorizes if the token and the user's role are valid
     static Authorize(req, res, role) {
         return __awaiter(this, void 0, void 0, function* () {
             // Checks if a token is provided
@@ -57,13 +58,6 @@ class Auth {
                 return false;
             else
                 return true;
-        });
-    }
-    static getUser(req, res) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const token = req.header('x-access-token');
-            const user = accessToken_controller_1.AccessToken.getUser(token);
-            return user;
         });
     }
 }

@@ -55,8 +55,6 @@ const date_and_time_1 = __importDefault(require("date-and-time"));
 const generate_password_1 = __importDefault(require("generate-password"));
 const multer_1 = __importDefault(require("multer"));
 const image_1 = require("./models/image");
-const fs_1 = __importDefault(require("fs"));
-const fs_extra_1 = __importDefault(require("fs-extra"));
 dotenv_1.default.config({ path: 'config/config.env' });
 const app = express_1.default();
 exports.app = app;
@@ -83,17 +81,21 @@ const storage = multer_1.default.diskStorage({
     }
 });
 const upload = multer_1.default({ storage });
+// Checks the time to see if it is 3 days before an event
 const checkTime = () => __awaiter(void 0, void 0, void 0, function* () {
     const now = new Date();
     const currentTime = date_and_time_1.default.format(now, 'YYYY/MM/DD HH');
     console.log(currentTime);
     const events = yield event_1.Event.find({});
+    // Checks through all events
     events.forEach((event) => __awaiter(void 0, void 0, void 0, function* () {
         const threeDaysBefore = date_and_time_1.default.addDays(event.eventStart, -3);
         const minusHours = date_and_time_1.default.addHours(threeDaysBefore, -2);
         const eventDate = date_and_time_1.default.format(minusHours, 'YYYY/MM/DD HH');
         console.log(eventDate);
+        // checks if eventdate -3days is equals to currenttime
         if (eventDate === currentTime) {
+            // Finds all participants in an event and sends an email to them
             const eventRegs = yield eventRegistration_1.EventRegistration.find({ eventId: event.eventId });
             eventRegs.forEach((eventReg) => __awaiter(void 0, void 0, void 0, function* () {
                 const ship = yield ship_1.Ship.findOne({ shipId: eventReg.shipId });
@@ -116,16 +118,17 @@ const checkTime = () => __awaiter(void 0, void 0, void 0, function* () {
                     // html: "<p> some html </p>" // html in the body
                 });
                 console.log('DONE');
-                return true;
             }));
+            return true;
         }
     }));
     return false;
 });
 exports.checkTime = checkTime;
+// Calls the checkTime function every hour
 setInterval(checkTime, 3600000);
 app.use('/', router);
-// FINDALL EVENTS
+// Retrieve all events
 app.get('/events', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const events = yield event_1.Event.find({}, { _id: 0, __v: 0 });
@@ -135,7 +138,7 @@ app.get('/events', (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         res.status(400).send('BAD REQUEST');
     }
 }));
-// POST EVENT
+// Create an new event
 app.post('/events', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const verify = yield authentication_controller_1.Auth.Authorize(req, res, "admin");
@@ -159,7 +162,7 @@ app.post('/events', (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         res.status(400).send('BAD REQUEST');
     }
 }));
-// FIND SINGLE EVENT
+// Retrieve a single Event with eventId
 app.get('/events/:eventId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const evId = req.params.eventId;
@@ -175,7 +178,7 @@ app.get('/events/:eventId', (req, res) => __awaiter(void 0, void 0, void 0, func
         res.status(400).send('BAD REQUEST');
     }
 }));
-// UPDATE EVENT
+// Update an Event with given eventId
 app.put('/events/:eventId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const verify = yield authentication_controller_1.Auth.Authorize(req, res, "admin");
@@ -192,6 +195,7 @@ app.put('/events/:eventId', (req, res) => __awaiter(void 0, void 0, void 0, func
         res.status(400).send('BAD REQUEST');
     }
 }));
+// Delete an Event with given eventId
 app.delete('/events/:eventId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Checking if authorized
@@ -229,6 +233,7 @@ app.put('/events/startEvent/:eventId', (req, res) => __awaiter(void 0, void 0, v
         res.status(400).send('BAD REQUEST');
     }
 }));
+// Updating event property "isLive" to false
 app.get('/events/stopEvent/:eventId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Checking if authorized
@@ -244,6 +249,7 @@ app.get('/events/stopEvent/:eventId', (req, res) => __awaiter(void 0, void 0, vo
         res.status(400).send('BAD REQUEST');
     }
 }));
+// Checks if event with given eventId has a route
 app.get('/events/hasRoute/:eventId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const evId = req.params.eventId;
@@ -257,6 +263,7 @@ app.get('/events/hasRoute/:eventId', (req, res) => __awaiter(void 0, void 0, voi
         res.status(400).send('BAD REQUEST');
     }
 }));
+// Retrieve all events with participant corresponding to primarykey of user, supplied from the token
 app.get('/events/myEvents/findFromUsername', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Checking if authorized
@@ -587,6 +594,7 @@ app.post('/users/login', (req, res) => __awaiter(void 0, void 0, void 0, functio
         res.status(400).json('BAD REQUEST');
     }
 }));
+// Create a new EventRegistration
 app.post('/eventRegistrations/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Checking if authorized
@@ -649,8 +657,8 @@ app.get('/eventRegistrations/findEventRegFromUsername/:eventId', (req, res) => _
         res.status(400).json('BAD REQUEST');
     }
 }));
+// Create an EventRegistration
 app.post('/eventRegistrations/signup', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    // Checking if authorized
     try {
         // Checks that the eventCode is correct
         const event = yield event_1.Event.findOne({ eventCode: req.body.eventCode }, { _id: 0, __v: 0 });
@@ -696,6 +704,7 @@ app.post('/eventRegistrations/signup', (req, res) => __awaiter(void 0, void 0, v
         res.status(400).json('BAD REQUEST');
     }
 }));
+// Delete an EventRegistration with given eventRegId
 app.delete('/eventRegistrations/:eventRegId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // Checking if authorized
     try {
@@ -710,6 +719,7 @@ app.delete('/eventRegistrations/:eventRegId', (req, res) => __awaiter(void 0, vo
         res.status(400).json('BAD REQUEST');
     }
 }));
+// Creates an EventRegistration
 app.post('/eventRegistrations/addParticipant', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // Checking if authorized
     const verify = yield authentication_controller_1.Auth.Authorize(req, res, "admin");
@@ -749,6 +759,7 @@ app.post('/eventRegistrations/addParticipant', (req, res) => __awaiter(void 0, v
         res.status(400).json('BAD REQUEST');
     }
 }));
+// Retrieve all EventRegistrations with the given eventId
 app.get('/eventRegistrations/getParticipants/:eventId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const participants = [];
@@ -787,6 +798,7 @@ app.get('/eventRegistrations/getParticipants/:eventId', (req, res) => __awaiter(
         res.status(400).json('BAD REQUEST');
     }
 }));
+// Update EventRegistration
 app.put('/eventRegistrations/updateParticipant/:eventRegId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // Checking if authorized
     const verify = yield authentication_controller_1.Auth.Authorize(req, res, "admin");
@@ -815,11 +827,12 @@ app.put('/eventRegistrations/updateParticipant/:eventRegId', (req, res) => __awa
         res.status(400).json('BAD REQUEST');
     }
 }));
+// Create a new LocationRegistration
 app.post('/locationRegistrations/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    // Checking if authorized
     try {
         // Creating the LocationRegistration
         let locationRegistration = req.body;
+        // Checking if valid
         const val = yield validate_controller_1.Validate.validateLocationForeignKeys(locationRegistration, res);
         if (!val) {
             return res.status(400).send({ message: 'Could not create' });
@@ -843,6 +856,7 @@ app.post('/locationRegistrations/', (req, res) => __awaiter(void 0, void 0, void
         res.status(400).json('BAD REQUEST');
     }
 }));
+// Retrieve latest LocationRegistrations from specified event
 app.get('/locationRegistrations/getLive/:eventId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const evId = req.params.eventId;
@@ -872,6 +886,7 @@ app.get('/locationRegistrations/getLive/:eventId', (req, res) => __awaiter(void 
         res.status(400).json('BAD REQUEST');
     }
 }));
+// Retrieve all LocationRegistrations from specified event
 app.get('/locationRegistrations/getReplay/:eventId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const evId = req.params.eventId;
@@ -895,6 +910,7 @@ app.get('/locationRegistrations/getReplay/:eventId', (req, res) => __awaiter(voi
         res.status(400).json('BAD REQUEST');
     }
 }));
+// Retrieve scoreboard from specific event
 app.get('/locationRegistrations/getScoreboard/:eventId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const evId = req.params.eventId;
@@ -930,6 +946,7 @@ app.get('/locationRegistrations/getScoreboard/:eventId', (req, res) => __awaiter
         res.status(400).json('BAD REQUEST');
     }
 }));
+// Delete all locationRegistrations with a given eventRegId
 app.delete('/locationRegistrations/deleteFromEventRegId/:eventId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // Checking if authorized
     const verify = yield authentication_controller_1.Auth.Authorize(req, res, "user");
@@ -946,21 +963,28 @@ app.delete('/locationRegistrations/deleteFromEventRegId/:eventId', (req, res) =>
         res.status(400).json('BAD REQUEST');
     }
 }));
+// NEW FEATURE: Post broadcast messages
 app.post('/broadcast', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        // Finds the event with the corresponding eventID
         const evId = req.body.eventId;
         const eventRegs = yield eventRegistration_1.EventRegistration.find({ eventId: evId }, { _id: 0, __v: 0 });
+        // Checks if there are participants
         if (!eventRegs || eventRegs.length === 0)
             return res.status(404).send({ message: "No participants found" });
         if (eventRegs.length !== 0) {
+            // Goes through each participant
             eventRegs.forEach((eventRegistration) => __awaiter(void 0, void 0, void 0, function* () {
+                // Checks if the participant's ship exists
                 const ship = yield ship_1.Ship.findOne({ shipId: eventRegistration.shipId }, { _id: 0, __v: 0 });
                 if (!ship)
                     return res.status(404).send({ message: "Ship not found" });
                 else if (ship) {
+                    // checks if the ship's user exists
                     const user = yield user_1.User.findOne({ emailUsername: ship.emailUsername }, { _id: 0, __v: 0 });
                     if (!user)
                         return res.status(404).send({ message: "User not found" });
+                    // posts the broadcast with the User of the ship connected to the eventregistration
                     if (user) {
                         const participant = new broadcast_1.Broadcast({
                             "eventId": req.body.eventId,
@@ -978,9 +1002,10 @@ app.post('/broadcast', (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.status(400).json('BAD REQUEST');
     }
 }));
-// NEW FEATURE: Broadcast message
+// NEW FEATURE: Get broadcast message
 app.post('/broadcastget/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        // Gets all the broadcasts related to the user with the use of req.body.Username
         const username = req.body.Username;
         const broadcasts = yield broadcast_1.Broadcast.find({ emailUsername: username }, { _id: 0, __v: 0 });
         yield broadcast_1.Broadcast.deleteMany({ emailUsername: username });
@@ -993,10 +1018,12 @@ app.post('/broadcastget/', (req, res) => __awaiter(void 0, void 0, void 0, funct
 // NEW FEATURE: forgot password
 app.put('/forgotpass', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        // Auto-generates new password
         const password = generate_password_1.default.generate({
             length: 8,
             numbers: true
         });
+        // Creates Transport object for sending mail
         const transporter = nodemailer_1.default.createTransport({
             host: "smtp.office365.com",
             port: 587,
@@ -1026,19 +1053,20 @@ app.put('/forgotpass', (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.status(400).json('BAD REQUEST');
     }
 }));
-app.post('/image', upload.single('image'), (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+// NEW FEATURE: Posts an image to the database
+app.post('/image', (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const obj = new image_1.Image();
         const image = yield image_1.Image.findOne({ name: req.body.teamName });
+        // Checks if the team already has an image
         if (image) {
             res.status(400).send({ message: 'team already has an image' });
         }
+        // Reads the image and converts it into a byte[] and saves it in the database, then empties the uploads directory
         else {
             obj.name = req.body.teamName;
-            obj.img.data = yield fs_1.default.readFileSync('C:\\Users\\Andreas Hansen\\OneDrive\\Skrivebord\\WEBTESTING\\TheOxbridgeSystemBackend\\uploads/' + req.file.filename);
-            obj.img.contentType = 'image/png';
+            obj.data = req.body.data;
             yield obj.save();
-            fs_extra_1.default.emptyDirSync('C:\\Users\\Andreas Hansen\\OneDrive\\Skrivebord\\WEBTESTING\\TheOxbridgeSystemBackend\\uploads/');
             res.status(201).send({ message: 'success!' });
         }
     }
@@ -1046,6 +1074,7 @@ app.post('/image', upload.single('image'), (req, res, next) => __awaiter(void 0,
         res.status(400).json('BAD REQUEST');
     }
 }));
+// NEW FEATURE: Gets the all images
 app.get('/image', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const images = yield image_1.Image.find({});

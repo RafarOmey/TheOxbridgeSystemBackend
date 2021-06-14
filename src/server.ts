@@ -106,8 +106,9 @@ const checkTime = async (): Promise<boolean> => {
                     // html: "<p> some html </p>" // html in the body
                 });
                 console.log('DONE');
-                return true;
+                
             });
+            return true;
         }
 
     });

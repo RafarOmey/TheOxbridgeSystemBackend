@@ -6,7 +6,6 @@ const BroadcastSchema = new mongoose_1.Schema({
     eventId: { type: Number },
     message: { type: String },
     emailUsername: { type: String },
-    hasBeenRead: { type: Boolean }
 });
 const Broadcast = mongoose_1.model('Broadcast', BroadcastSchema);
 exports.Broadcast = Broadcast;

@@ -16,7 +16,7 @@ describe("GET single event", () => {
 // REMEMBER TO INSERT EMAIL
 describe("post eventRegistration", () => {
     it("POST should insert an eventregistration", async () => {
-        const result = await request(api).post("/eventRegistrations/signup").send({ "shipId": "4", "teamName": "CoolTeam", "eventCode": "1234", "emailUsername": "*INSERT EMAIL HERE*" });
+        const result = await request(api).post("/eventRegistrations/signup").send({ "shipId": "3", "teamName": "CoolTeam", "eventCode": "1234", "emailUsername": "*INSERT EMAIL HERE*" });
         expect(result.body).toEqual({ message: 'Registration successful' });
         expect(result.status).toEqual(201);
     });

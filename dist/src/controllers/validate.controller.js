@@ -16,6 +16,7 @@ const ship_1 = require("../models/ship");
 const locationRegistration_1 = require("../models/locationRegistration");
 const racePoint_1 = require("../models/racePoint");
 class Validate {
+    // Validates if the ship and the event exists
     static validateEventForeignKeys(registration, res) {
         return __awaiter(this, void 0, void 0, function* () {
             // Checking if ship exists
@@ -30,6 +31,7 @@ class Validate {
             }
         });
     }
+    // Creates a registration
     static createRegistration(newRegistration, res) {
         return __awaiter(this, void 0, void 0, function* () {
             // const val: boolean = await this.validateEventForeignKeys(newRegistration, res);
@@ -82,6 +84,7 @@ class Validate {
         const d = R * c;
         return d;
     }
+    // Validates if the eventreg exists
     static validateLocationForeignKeys(registration, res) {
         return __awaiter(this, void 0, void 0, function* () {
             // Checking if eventReg exists
