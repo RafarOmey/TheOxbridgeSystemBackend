@@ -1232,7 +1232,7 @@ app.post('/image', upload.single('image'), async (req, res, next) => {
             obj.img.data = req.body.image;
             obj.img.contentType = 'image/png';
             await obj.save();
-            fsExtra.emptyDirSync('C:\\Users\\Andreas Hansen\\OneDrive\\Skrivebord\\WEBTESTING\\TheOxbridgeSystemBackend\\uploads/')
+            fsExtra.emptyDirSync('C:\\Users\\'+'*ENTER FILEPATH HERE*'+'\\TheOxbridgeSystemBackend\\uploads/')
             res.status(201).send({ message: 'success!' });
         }
 
