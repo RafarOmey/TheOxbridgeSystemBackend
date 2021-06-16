@@ -99,14 +99,14 @@ const checkTime = async (): Promise<boolean> => {
 
                 // sending mail with defined transport object
                 const info = await transporter.sendMail({
-                    from: '"Tregatta" <andr97e6@easv365.dk>', // sender address
+                    from: '"Tregatta" <*INSERT EMAIL*>', // sender address
                     to: ship.emailUsername, //
                     subject: "Event in 3 days!", // subject line
                     text: "this is your reminder that in 3 days, " + event.name + " will start, which you are participating in. good luck!", // text body
                     // html: "<p> some html </p>" // html in the body
                 });
                 console.log('DONE');
-                
+
             });
             return true;
         }
@@ -779,7 +779,7 @@ app.post('/eventRegistrations/signup', async (req, res) => {
 
                 // sending mail with defined transport object
                 const info = await transporter.sendMail({
-                    from: '"Tregatta" <andr97e6@easv365.dk>', // sender address
+                    from: '"Tregatta" <*INSERT EMAIL*>', // sender address
                     to: req.body.emailUsername, //
                     subject: "Event Participation Confirmation", // subject line
                     text: "your team - " + req.body.teamName + ", is now listed in the event " + event.name + ", with the boat " + ship.name + ".", // text body
@@ -912,7 +912,7 @@ app.get('/eventRegistrations/getParticipants/:eventId', async (req, res) => {
     }
 });
 
-// Update EventRegistration 
+// Update EventRegistration
 app.put('/eventRegistrations/updateParticipant/:eventRegId', async (req, res) => {
     // Checking if authorized
     const verify: boolean = await Auth.Authorize(req, res, "admin");
@@ -1150,22 +1150,16 @@ app.post('/broadcast', async (req, res) => {
                             "emailUsername": user.emailUsername
                         });
                         await participant.save();
-
-
                     }
-
                 }
-
             });
         }
         res.status(201).send({ message: 'Broadcast successfully sent' });
-
     } catch (e) {
         res.status(400).json('BAD REQUEST');
     }
-
-
 });
+
 // NEW FEATURE: Get broadcast message
 app.post('/broadcastget/', async (req, res) => {
     try {
@@ -1200,7 +1194,7 @@ app.put('/forgotpass', async (req, res) => {
         });
         // sending mail with defined transport object
         const info = await transporter.sendMail({
-            from: '"Tregatta" <andr97e6@easv365.dk>', // sender address
+            from: '"Tregatta" <*INSERT EMAIL*>', // sender address
             to: req.body.emailUsername, //
             subject: "Forgotten password", // subject line
             text: "Seems like you forgot your password! here's a new one: " + password + "", // text body
@@ -1223,7 +1217,7 @@ app.put('/forgotpass', async (req, res) => {
     }
 });
 
-//NEW FEATURE: Posts an image to the database
+// NEW FEATURE: Posts an image to the database
 app.post('/image', upload.single('image'), async (req, res, next) => {
     try {
         const obj: IImage = new Image();
@@ -1232,10 +1226,10 @@ app.post('/image', upload.single('image'), async (req, res, next) => {
         if (image) {
             res.status(400).send({ message: 'team already has an image' })
         }
-        //Reads the image and converts it into a byte[] and saves it in the database, then empties the uploads directory
+        // Reads the image and converts it into a byte[] and saves it in the database, then empties the uploads directory
         else {
             obj.name = req.body.teamName;
-            obj.img.data = await fs.readFileSync('C:\\Users\\Andreas Hansen\\OneDrive\\Skrivebord\\WEBTESTING\\TheOxbridgeSystemBackend\\uploads/' + req.file.filename);
+            obj.img.data = req.body.image;
             obj.img.contentType = 'image/png';
             await obj.save();
             fsExtra.emptyDirSync('C:\\Users\\Andreas Hansen\\OneDrive\\Skrivebord\\WEBTESTING\\TheOxbridgeSystemBackend\\uploads/')

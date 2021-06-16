@@ -55,6 +55,7 @@ const date_and_time_1 = __importDefault(require("date-and-time"));
 const generate_password_1 = __importDefault(require("generate-password"));
 const multer_1 = __importDefault(require("multer"));
 const image_1 = require("./models/image");
+const fs_extra_1 = __importDefault(require("fs-extra"));
 dotenv_1.default.config({ path: 'config/config.env' });
 const app = express_1.default();
 exports.app = app;
@@ -1054,7 +1055,7 @@ app.put('/forgotpass', (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
 }));
 // NEW FEATURE: Posts an image to the database
-app.post('/image', (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+app.post('/image', upload.single('image'), (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const obj = new image_1.Image();
         const image = yield image_1.Image.findOne({ name: req.body.teamName });
@@ -1065,8 +1066,10 @@ app.post('/image', (req, res, next) => __awaiter(void 0, void 0, void 0, functio
         // Reads the image and converts it into a byte[] and saves it in the database, then empties the uploads directory
         else {
             obj.name = req.body.teamName;
-            obj.data = req.body.data;
+            obj.img.data = req.body.image;
+            obj.img.contentType = 'image/png';
             yield obj.save();
+            fs_extra_1.default.emptyDirSync('C:\\Users\\Andreas Hansen\\OneDrive\\Skrivebord\\WEBTESTING\\TheOxbridgeSystemBackend\\uploads/');
             res.status(201).send({ message: 'success!' });
         }
     }
